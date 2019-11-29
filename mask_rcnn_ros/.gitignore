@@ -1,5 +1,0 @@
-.ipynb_checkpoints/
-__pycache__/
-.idea/
-mask_rcnn_coco.h5
-*.pyc
