@@ -39,7 +39,6 @@ catkin_package(
    std_msgs
    sensor_msgs
    message_runtime
-   mask_rcnn_ros_msgs
 )
 
 include_directories(
