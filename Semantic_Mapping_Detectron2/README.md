@@ -29,16 +29,3 @@ Parameters
         #Enables debug mode
 	    <param name="debug" value="true"/>
 	  
-	  
-# Tips
-	    
-If using Mask R-CNN gives you this error for compatibility:
-   
-     TypeError: integer argument expected, got float
-
-It can be solved by removing the following lines from the file "/src/mask_rcnn_ros/utils.py":
-
-    # Resize image and mask
-    if scale != 1:
-        image = scipy.misc.imresize(
-            (int(round(h * scale)), int(round(w * scale))))
