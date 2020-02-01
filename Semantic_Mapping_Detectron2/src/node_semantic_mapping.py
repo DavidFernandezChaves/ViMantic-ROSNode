@@ -107,7 +107,7 @@ class SemanticMappingNode(object):
                             pointCloud.header = data_header
 
                             semanticObject.score = self._cnn_msg.scores[i]
-                            semanticObject.id = self._cnn_msg.class_names[i]
+                            semanticObject.type = self._cnn_msg.class_names[i]
 
                             try:
                                 mask = (self._bridge.imgmsg_to_cv2(self._cnn_msg.masks[i])== 255)
