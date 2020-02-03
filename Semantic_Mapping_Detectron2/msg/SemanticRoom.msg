@@ -1,3 +1,3 @@
 Header header
-string roomID
+string id
 SemanticRoomScore[] probabilities

@@ -11,7 +11,7 @@ import std_msgs.msg
 import tf2_geometry_msgs
 import tf2_ros
 from cv_bridge import CvBridge, CvBridgeError
-from geometry_msgs.msg import Point32, PoseStamped, Point, Vector3
+from geometry_msgs.msg import Point32, PoseStamped, Point, Vector3, Pose
 from semantic_mapping.msg import SemanticObject, SemanticObjects
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import PointCloud
@@ -155,10 +155,10 @@ class SemanticMappingNode(object):
 
                             p1.pose.position = Point(-x[y_center, x_center], y[y_center, x_center], z_center)
                             p1.pose.orientation.w = 1.0  # Neutral orientation
-                            pose = tf2_geometry_msgs.do_transform_pose(p1, data_transform)
-                            semanticObject.pose = pose
+                            res = tf2_geometry_msgs.do_transform_pose(p1, data_transform)
+                            semanticObject.pose = res.pose
 
-                            self._pub_pose.publish(pose)
+                            self._pub_pose.publish(res)
 
                             if self._point_cloud_enabled:
                                 for j in range(len(z_)):
