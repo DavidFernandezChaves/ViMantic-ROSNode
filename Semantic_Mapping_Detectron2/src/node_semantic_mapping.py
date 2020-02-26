@@ -102,78 +102,79 @@ class SemanticMappingNode(object):
                     for i in range(len(self._cnn_msg.class_names)):
 
                         if self._cnn_msg.scores[i] > self._threshold:
-                            semanticObject = SemanticObject()
-                            pointCloud = PointCloud()
-                            pointCloud.header = data_header
+                            semantic_object = SemanticObject()
+                            point_cloud = PointCloud()
+                            point_cloud.header = data_header
 
-                            semanticObject.score = self._cnn_msg.scores[i]
-                            semanticObject.type = self._cnn_msg.class_names[i]
+                            semantic_object.score = self._cnn_msg.scores[i]
+                            semantic_object.type = self._cnn_msg.class_names[i]
 
                             try:
                                 mask = (self._bridge.imgmsg_to_cv2(self._cnn_msg.masks[i])== 255)
                             except CvBridgeError as e:
                                 print(e)
 
-                            x_ = x[mask]
-                            y_ = y[mask]
-                            z_ = z[mask]
+                            if x.shape == mask.shape:
 
-                            # Bandpass filter with Z data
-                            top_margin = (z_.max() - z_.min()) * 0.9 + z_.min()
-                            bottom_margin = (z_.max() - z_.min()) * 0.1 + z_.min()
+                                x_ = x[mask]
+                                y_ = y[mask]
+                                z_ = z[mask]
 
-                            mask2 = np.logical_and(z_ > bottom_margin, z_ < top_margin)
+                                # Bandpass filter with Z data
+                                top_margin = (z_.max() - z_.min()) * 0.9 + z_.min()
+                                bottom_margin = (z_.max() - z_.min()) * 0.1 + z_.min()
 
-                            x_ = x_[mask2]
-                            y_ = y_[mask2]
-                            z_ = z_[mask2]
+                                mask2 = np.logical_and(z_ > bottom_margin, z_ < top_margin)
 
-                            if len(x_) == 0:
-                                continue
+                                x_ = x_[mask2]
+                                y_ = y_[mask2]
+                                z_ = z_[mask2]
 
-                            # pointCloud.channels = [ChannelFloat32("red", img_rgb[mask, 0]),
-                            #                        ChannelFloat32("green", img_rgb[mask, 1]),
-                            #                        ChannelFloat32("blue", img_rgb[mask, 2])]
+                                if len(x_) == 0:
+                                    continue
 
-                            scale_x = x_.max() - x_.min()
-                            scale_y = y_.max() - y_.min()
-                            scale_z = np.std(z_)
+                                # point_cloud.channels = [ChannelFloat32("red", img_rgb[mask, 0]),
+                                #                        ChannelFloat32("green", img_rgb[mask, 1]),
+                                #                        ChannelFloat32("blue", img_rgb[mask, 2])]
 
-                            # z_.max() - z_.min()
+                                scale_x = x_.max() - x_.min()
+                                scale_y = y_.max() - y_.min()
+                                scale_z = np.std(z_)
 
-                            semanticObject.scale = Vector3(scale_x, scale_y, scale_z)
+                                # z_.max() - z_.min()
 
-                            # Calculate the center px
-                            x_center = int(self._cnn_msg.boxes[i].x_offset + self._cnn_msg.boxes[i].width / 2)
-                            y_center = int(self._cnn_msg.boxes[i].y_offset + self._cnn_msg.boxes[i].height / 2)
-                            # And the depth of the center
-                            z_center = -(float(scale_z / 2) + np.average(z_))
+                                semantic_object.scale = Vector3(scale_x, scale_y, scale_z)
 
-                            # Transformed the center of the object to the map reference system
-                            p1 = PoseStamped()
-                            p1.header = data_header
+                                # Calculate the center px
+                                x_center = int(self._cnn_msg.boxes[i].x_offset + self._cnn_msg.boxes[i].width / 2)
+                                y_center = int(self._cnn_msg.boxes[i].y_offset + self._cnn_msg.boxes[i].height / 2)
+                                # And the depth of the center
+                                z_center = -(float(scale_z / 2) + np.average(z_))
 
-                            p1.pose.position = Point(-x[y_center, x_center], y[y_center, x_center], z_center)
-                            p1.pose.orientation.w = 1.0  # Neutral orientation
-                            res = tf2_geometry_msgs.do_transform_pose(p1, data_transform)
-                            semanticObject.pose = res.pose
+                                # Transformed the center of the object to the map reference system
+                                p1 = PoseStamped()
+                                p1.header = data_header
 
-                            self._pub_pose.publish(res)
+                                p1.pose.position = Point(-x[y_center, x_center], y[y_center, x_center], z_center)
+                                p1.pose.orientation.w = 1.0  # Neutral orientation
+                                res = tf2_geometry_msgs.do_transform_pose(p1, data_transform)
+                                semantic_object.pose = res.pose
 
-                            if self._point_cloud_enabled:
-                                for j in range(len(z_)):
-                                    pointCloud.points.append(
-                                        Point32(-round(x_[j] - x_center, 4), round(y_[j] - y_center, 4),
-                                                -round(z_[j] - z_center, 4)))
+                                self._pub_pose.publish(res)
 
-                            semanticObject.pointCloud = pointCloud
-                            result.semanticObjects.append(semanticObject)
+                                if self._point_cloud_enabled:
+                                    for j in range(len(z_)):
+                                        point_cloud.points.append(
+                                            Point32(-round(x_[j] - x_center, 4), round(y_[j] - y_center, 4),
+                                                    -round(z_[j] - z_center, 4)))
 
-                            # Debug----------------------------------------------------------------------------------------
-                            if self._debug:
-                                print (self._cnn_msg.class_names[i] + ": " + str(self._cnn_msg.scores[i]))
-                            # ---------------------------------------------------------------------------------------------
+                                semantic_object.pointCloud = point_cloud
+                                result.semanticObjects.append(semantic_object)
 
+                                # Debug----------------------------------------------------------------------------------------
+                                if self._debug:
+                                    print (self._cnn_msg.class_names[i] + ": " + str(self._cnn_msg.scores[i]))
+                                # ---------------------------------------------------------------------------------------------
                     self._pub_result.publish(result)
 
             rate.sleep()
