@@ -114,7 +114,11 @@ class SemanticMappingNode(object):
                             except CvBridgeError as e:
                                 print(e)
 
-                            if x.shape == mask.shape:
+                            if x.shape != mask.shape:
+                                print(x.shape)
+                                print(mask.shape)
+
+                            else:
 
                                 x_ = x[mask]
                                 y_ = y[mask]
