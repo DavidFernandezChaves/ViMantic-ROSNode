@@ -22,7 +22,7 @@ Use the launcher: ViMantic_Detectron2/launch/ViMantic.launch
 Parameters:
 ```bash
         #Name of the topic where the results are published
-        <param name="topic_result" value="semantic_mapping/SemanticObject"/>
+        <param name="topic_result" value="vimantic/SemanticObject"/>
         
         #Topic name where the RGB image is obtained
 	    <param name="topic_intensity" value="RGBD_4_intensity"/>
@@ -31,7 +31,7 @@ Parameters:
         <param name="topic_depth" value="RGBD_4_depth"/>
         
         #Topic name of CNN input
-        <param name="topic_republic" value="semantic_mapping/RGB"/>
+        <param name="topic_republic" value="vimantic/RGB"/>
         
         #Topic name of CNN results
         <param name="topic_cnn" value="detectron2_ros/result"/>
