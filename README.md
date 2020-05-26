@@ -17,7 +17,7 @@ ViMantic is a distributed architecture for the building of semantic maps using m
 This software is designed to be launched using [Detectron2](https://github.com/DavidFernandezChaves/Detectron2_ros) in ros. However, it can be easily modified to use a different CNN.
 
 ## Use
-Use the launcher:Semantic_mapping.launch
+Use the launcher: ViMantic_Detectron2/launch/ViMantic.launch
 
 Parameters:
 ```bash
