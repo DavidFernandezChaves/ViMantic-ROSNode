@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>semantic_mapping</name>
+  <name>vimantic</name>
   <version>0.1.0</version>
-  <description>The semantic_mapping package</description>
+  <description>ViMantic package</description>
 
 
   <maintainer email="davfercha@uma.es">David Fernandez Chaves</maintainer>
@@ -10,7 +10,7 @@
   <license>MIT</license>
 
 
-   <url type="website">https://github.com/DavidFernandezChaves/Semantic-Mapping</url>
+   <url type="website">https://github.com/DavidFernandezChaves/ViMantic-Client</url>
 
   <author email="davfercha@uma.es">David Fernandez Chaves</author>
   <author>David Fernandez Chaves</author>

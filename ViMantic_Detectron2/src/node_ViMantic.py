@@ -12,7 +12,7 @@ import tf2_ros
 from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import Point32, PoseStamped, Point, Vector3, Quaternion
 from numpy import savetxt
-from semantic_mapping.msg import SemanticObject, SemanticObjects
+from vimantic.msg import SemanticObject, SemanticObjects
 from sensor_msgs.msg import Image
 from sensor_msgs.msg import PointCloud
 
@@ -48,13 +48,13 @@ class SemanticMappingNode(object):
         self._list_time_objectInfoPacket = []
 
         # Publisher
-        self._pub_result = rospy.Publisher(rospy.get_param('~topic_result', 'semantic_mapping/SemanticObjects'),
+        self._pub_result = rospy.Publisher(rospy.get_param('~topic_result', 'vimantic/SemanticObjects'),
                                            SemanticObjects,
                                            queue_size=10)
 
-        self._pub_repub = rospy.Publisher(rospy.get_param('~topic_republic', 'semantic_mapping/RGB'), Image,
+        self._pub_repub = rospy.Publisher(rospy.get_param('~topic_republic', 'vimantic/RGB'), Image,
                                           queue_size=10)
-        self._pub_pose = rospy.Publisher('semantic_mapping/point', PoseStamped, queue_size=10)
+        self._pub_pose = rospy.Publisher('vimantic/point', PoseStamped, queue_size=10)
 
         # Subscribers
         rospy.Subscriber(rospy.get_param('~topic_cnn'), detectron2_ros.msg.Result, self.callback_new_detection)
@@ -194,8 +194,8 @@ class SemanticMappingNode(object):
             rate.sleep()
 
         if self._enableTimeCapture:
-            savetxt('/home/omega100/time_cnn.csv', self._list_time_cnn, delimiter=',')
-            savetxt('/home/omega100/time_objectInfoPacket.csv', self._list_time_objectInfoPacket, delimiter=',')
+            savetxt('~/ViMantic/time_cnn.csv', self._list_time_cnn, delimiter=',')
+            savetxt('~/ViMantic/time_objectInfoPacket.csv', self._list_time_objectInfoPacket, delimiter=',')
 
     def _image_callback(self, depth_msg, rgb_msg):
 
@@ -215,11 +215,11 @@ class SemanticMappingNode(object):
                                                         rospy.Duration(5))
 
             # Robot@Home fixe
-            rotation = (transform.transform.rotation.x, transform.transform.rotation.y, transform.transform.rotation.z,
-                        transform.transform.rotation.w)
-            rot = tf.transformations.euler_from_quaternion(rotation)
-            newrot = tf.transformations.quaternion_from_euler(rot[0], rot[1], rot[2] - 90)
-            transform.transform.rotation = Quaternion(newrot[0], newrot[1], newrot[2], newrot[3])
+            #rotation = (transform.transform.rotation.x, transform.transform.rotation.y, transform.transform.rotation.z,
+            #            transform.transform.rotation.w)
+            #rot = tf.transformations.euler_from_quaternion(rotation)
+            #newrot = tf.transformations.quaternion_from_euler(rot[0], rot[1], rot[2] - 90)
+            #transform.transform.rotation = Quaternion(newrot[0], newrot[1], newrot[2], newrot[3])
 
             self._last_msg = [img_depth, depth_msg.header, transform]
             self._waiting_cnn = True

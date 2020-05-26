@@ -1,6 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(semantic_mapping)
-
+project(vimantic)
 
 find_package(catkin REQUIRED COMPONENTS
   rospy
@@ -12,9 +11,6 @@ find_package(catkin REQUIRED COMPONENTS
   actionlib_msgs
   actionlib
 )
-
-find_package(mask_rcnn_ros QUIET)
-
 
 ## Generate messages in the 'msg' folder
 add_message_files(

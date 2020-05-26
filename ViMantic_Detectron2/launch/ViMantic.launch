@@ -5,11 +5,11 @@
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
 
     ### Semantic_maping ###
-    <node name="semantic_mapping" pkg="semantic_mapping" type="node_semantic_mapping.py" output="screen">
-        <param name="topic_result" value="semantic_mapping/SemanticObjects"/>
-        <param name="topic_intensity" value="RGBD_2_intensity"/>
-        <param name="topic_depth" value="RGBD_2_depth"/>
-        <param name="topic_republic" value="semantic_mapping/RGB"/>
+    <node name="semantic_mapping" pkg="vimantic" type="node_ViMantic.py" output="screen">
+        <param name="topic_result" value="vimantic/SemanticObjects"/>
+        <param name="topic_intensity" value="RGBD_4_intensity"/>
+        <param name="topic_depth" value="RGBD_4_depth"/>
+        <param name="topic_republic" value="vimantic/RGB"/>
         <param name="topic_cnn" value="detectron2_ros/result"/>
         <param name="threshold" value="0.20"/>
         <param name="input_angle" value="90"/>
@@ -19,7 +19,7 @@
 
     ### RVIZ ###
     <node name="rviz_player" pkg="rviz" type="rviz"
-          args="-d $(find semantic_mapping)/launch/Semantic_mapping_config_rviz.rviz"/>
+          args="-d $(find vimantic)/launch/ViMantic_config_rviz.rviz"/>
 
     ### simulation ###
     <node pkg="rosbag" type="play" name="player" output="log"
