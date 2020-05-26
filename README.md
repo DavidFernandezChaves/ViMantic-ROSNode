@@ -16,6 +16,39 @@ ViMantic is a distributed architecture for the building of semantic maps using m
 
 This software is designed to be launched using [Detectron2](https://github.com/DavidFernandezChaves/Detectron2_ros) in ros. However, it can be easily modified to use a different CNN.
 
+## Uses
+Use the launcher:Semantic_mapping.launch
+
+Parameters:
+```bash
+        #Name of the topic where the results are published
+        <param name="topic_result" value="semantic_mapping/SemanticObject"/>
+        
+        #Topic name where the RGB image is obtained
+	    <param name="topic_intensity" value="RGBD_4_intensity"/>
+	    
+        #Topic name where the depth image is obtained
+        <param name="topic_depth" value="RGBD_4_depth"/>
+        
+        #Topic name of CNN input
+        <param name="topic_republic" value="semantic_mapping/RGB"/>
+        
+        #Topic name of CNN results
+        <param name="topic_cnn" value="detectron2_ros/result"/>
+        
+        #Threshold of accuracy_estimation to publish a detected object        
+        <param name="threshold" value="0.50"/>
+        
+        #Angle of the input image
+        <param name="input_angle" value="90"/>
+        
+        #Enables the sending of the object's point cloud. (Disable in case of slow wireless networks)
+        <param name="point_cloud" value="false"/>        
+        
+        #Enables debug mode
+	    <param name="debug" value="true"/>
+```
+
 ## Examples
 <div align="center">
   <img src="https://github.com/DavidFernandezChaves/ViMantic-Server/blob/master/Imgs/maps.PNG?raw=true"/>
