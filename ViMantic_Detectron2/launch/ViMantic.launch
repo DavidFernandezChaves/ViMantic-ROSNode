@@ -4,15 +4,23 @@
     ### ROSBRIDGE ###
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
 
-    ### Semantic_maping ###
-    <node name="semantic_mapping" pkg="vimantic" type="node_ViMantic.py" output="screen">
+    ### Semantic_maping Robot@Home###
+<!--    <node name="semantic_mapping" pkg="vimantic" type="ViMantic_robotHome_node.py" output="screen">-->
+<!--        <param name="topic_result" value="vimantic/SemanticObjects"/>-->
+<!--        <param name="topic_intensity" value="RGBD_4_intensity"/>-->
+<!--        <param name="topic_depth" value="RGBD_4_depth"/>-->
+<!--        <param name="topic_republic" value="vimantic/RGB"/>-->
+<!--        <param name="topic_cnn" value="detectron2_ros/result"/>-->
+<!--        <param name="threshold" value="0.20"/>-->
+<!--        <param name="input_angle" value="90"/>-->
+<!--        <param name="point_cloud" value="false"/>-->
+<!--        <param name="debug" value="true"/>-->
+<!--    </node>-->
+    ### Semantic_maping Virtual###
+    <node name="semantic_mapping" pkg="vimantic" type="ViMantic_virtual_node.py" output="screen">
         <param name="topic_result" value="vimantic/SemanticObjects"/>
-        <param name="topic_intensity" value="RGBD_4_intensity"/>
-        <param name="topic_depth" value="RGBD_4_depth"/>
-        <param name="topic_republic" value="vimantic/RGB"/>
         <param name="topic_cnn" value="detectron2_ros/result"/>
         <param name="threshold" value="0.20"/>
-        <param name="input_angle" value="90"/>
         <param name="point_cloud" value="false"/>
         <param name="debug" value="true"/>
     </node>
@@ -22,10 +30,10 @@
           args="-d $(find vimantic)/launch/ViMantic_config_rviz.rviz"/>
 
     ### simulation ###
-    <node pkg="rosbag" type="play" name="player" output="log"
-          args="--clock /home/omega100/Descargas/dataset/rosbagfile/anto-s1_fullhouse1_localization.bag"/>
-    <include file="$(find missions_pkg)/launch/simbot/simbot_map_server.launch">
-        <arg name="map_file" value="$(find missions_pkg)/maps/anto-s1.yaml"/>
-    </include>
+<!--    <node pkg="rosbag" type="play" name="player" output="log"-->
+<!--          args="&#45;&#45;clock /home/omega100/Descargas/dataset/rosbagfile/anto-s1_fullhouse1_localization.bag"/>-->
+<!--    <include file="$(find missions_pkg)/launch/simbot/simbot_map_server.launch">-->
+<!--        <arg name="map_file" value="$(find missions_pkg)/maps/anto-s1.yaml"/>-->
+<!--    </include>-->
 
 </launch>
