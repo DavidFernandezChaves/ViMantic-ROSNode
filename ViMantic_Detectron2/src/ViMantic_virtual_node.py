@@ -47,15 +47,15 @@ class SemanticMappingNode(object):
 
         # Publisher
         self.pub_result = rospy.Publisher(rospy.get_param('~topic_result', 'vimantic/SemanticObjects'),
-                                           SemanticObjects,
-                                           queue_size=0)
+                                          SemanticObjects,
+                                          queue_size=10)
 
-        self.pub_repub = rospy.Publisher('vimantic/imgRGBToCNN', Image, queue_size=0)
-        self.pub_pose = rospy.Publisher('vimantic/point', PoseStamped, queue_size=0)
+        self.pub_repub = rospy.Publisher('vimantic/imgRGBToCNN', Image, queue_size=10)
+        self.pub_pose = rospy.Publisher('vimantic/point', PoseStamped, queue_size=10)
 
         # Subscribers
-        rospy.Subscriber(rospy.get_param('~topic_cnn'), detectron2_ros.msg.Result, self.callback_new_detection, queue_size=0)
-        rospy.Subscriber("vimantic/virtualCameraRGBD", CompressedImage, self.callbackVirtualImage, queue_size=0)
+        rospy.Subscriber(rospy.get_param('~topic_cnn'), detectron2_ros.msg.Result, self.callback_new_detection)
+        rospy.Subscriber("vimantic/virtualCameraRGBD", CompressedImage, self.callbackVirtualImage, queue_size=1)
 
         tf2_ros.TransformListener(self.tfBuffer)
 
@@ -144,23 +144,16 @@ class SemanticMappingNode(object):
                                 # Calculate the center
                                 x_center = int(self.cnn_msg.boxes[i].x_offset + self.cnn_msg.boxes[i].width / 2)
                                 y_center = int(self.cnn_msg.boxes[i].y_offset + self.cnn_msg.boxes[i].height / 2)
-                                z_center = scale_z/2 + z_.min()
-
-                                # print(x_center)
-                                # print (y_center)
-                                # print (z_center)
+                                z_center = scale_z / 2 + z_.min()
 
                                 # Transformed the center of the object to the map reference system
                                 p1 = PoseStamped()
                                 p1.header = data_header
-                                #
-                                p1.pose.position = Point(z_center, x[y_center, x_center],y[y_center, x_center])
-                                # print(p1.pose.position)
+                                p1.pose.position = Point(z_center, x[y_center, x_center], y[y_center, x_center])
                                 p1.pose.orientation.w = 1.0  # Neutral orientation
                                 res = tf2_geometry_msgs.do_transform_pose(p1, data_transform)
-                                # print(res.pose)
                                 semantic_object.pose = res.pose
-                                #semantic_object.pose = p1.pose
+                                # semantic_object.pose = p1.pose
 
                                 self.pub_pose.publish(res)
 
@@ -196,16 +189,15 @@ class SemanticMappingNode(object):
     def callbackVirtualImage(self, img_msg):
 
         if not self.waiting_cnn:
+            transform = self.tfBuffer.lookup_transform("map",
+                                                       img_msg.header.frame_id,  # source frame
+                                                       rospy.Time(0))  # get the tf at first available time
+            # rospy.Duration(5))
             np_arr = np.fromstring(img_msg.data, np.uint8)
             im = cv2.imdecode(np_arr, -1)
-            img_rgb = cv2.cvtColor(im[:,:,:3],cv2.COLOR_RGB2BGR)
+            img_rgb = cv2.cvtColor(im[:, :, :3], cv2.COLOR_RGB2BGR)
 
-            img_depth = np.divide(im[:,:,3],255.0)
-
-            transform = self.tfBuffer.lookup_transform("map",
-                                                        img_msg.header.frame_id,  # source frame
-                                                        rospy.Time(0),  # get the tf at first available time
-                                                        rospy.Duration(5))
+            img_depth = np.divide(im[:, :, 3], 255.0)
 
             self.last_package = [img_msg.header, transform, img_rgb, img_depth]
             self.waiting_cnn = True
@@ -221,7 +213,6 @@ class SemanticMappingNode(object):
             # CNN Time
             if self.enableTimeCapture:
                 self.list_time_cnn.append((rospy.get_rostime() - self.time_cnn).nsecs / 1000000)
-
 
 
 def main(argv):
