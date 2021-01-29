@@ -1,9 +1,6 @@
 [submodule "vision_opencv"]
 	path = vision_opencv
 	url = https://github.com/ros-perception/vision_opencv.git
-[submodule "mask_rcnn_ros"]
-	path = mask_rcnn_ros
-	url = https://github.com/akio/mask_rcnn_ros.git
 [submodule "Detectron2_ros"]
 	path = Detectron2_ros
 	url = https://github.com/DavidFernandezChaves/Detectron2_ros.git
