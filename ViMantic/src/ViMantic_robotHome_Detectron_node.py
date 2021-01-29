@@ -11,7 +11,7 @@ import tf
 import tf2_geometry_msgs
 import tf2_ros
 from cv_bridge import CvBridge, CvBridgeError
-from geometry_msgs.msg import Point32, PoseStamped, Point, Vector3, Quaternion
+from geometry_msgs.msg import Point32, PoseStamped, Point, Vector3, Quaternion, PoseWithCovariance
 from numpy import savetxt
 from vimantic.msg import SemanticObject, SemanticObjectArray
 from sensor_msgs.msg import Image
@@ -161,11 +161,12 @@ class SemanticMappingNode(object):
 
                         p1.pose.position = Point(-x[y_center, x_center], y[y_center, x_center], z_center)
                         p1.pose.orientation.w = 1.0  # Neutral orientation
-                        res = tf2_geometry_msgs.do_transform_pose(p1, data_transform)
-                        semanticObject.object.pose = res.pose
+                        ans = tf2_geometry_msgs.do_transform_pose(p1, data_transform)
+                        semanticObject.object.pose = PoseWithCovariance()
+                        semanticObject.object.pose.pose = ans.pose
 
                         if self.debug:
-                            self._pub_pose.publish(res)
+                            self._pub_pose.publish(ans)
 
                         result.semanticObjects.append(semanticObject)
                         objstring = objstring + ' ' + semanticObject.objectType + ', p=%.2f.' % (
