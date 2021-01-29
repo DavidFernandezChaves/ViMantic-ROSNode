@@ -135,7 +135,7 @@ class ViMantic:
                     semanticObject = SemanticObject()
 
                     semanticObject.object.score = result_cnn.detections[i].results[0].score
-                    semanticObject.ObjectType = result_cnn.detections[i].results[0].id
+                    semanticObject.objectType = result_cnn.detections[i].results[0].id
 
                     box = result_cnn.detections[i].bbox
 
@@ -185,7 +185,7 @@ class ViMantic:
                     self._pub_pose.publish(ans)
 
                     result.semanticObjects.append(semanticObject)
-                    objstring = objstring + ' ' + semanticObject.ObjectType + ', p=%.2f.' % (
+                    objstring = objstring + ' ' + semanticObject.objectType + ', p=%.2f.' % (
                         semanticObject.object.score)
 
                 self._pub_result.publish(result)

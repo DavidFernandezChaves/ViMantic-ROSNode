@@ -118,7 +118,7 @@ class SemanticMappingNode(object):
                         semanticObject = SemanticObject()
 
                         semanticObject.object.score = self._cnn_msg.scores[i]
-                        semanticObject.ObjectType = self._cnn_msg.class_names[i]
+                        semanticObject.objectType = self._cnn_msg.class_names[i]
 
                         try:
                             mask = (self._bridge.imgmsg_to_cv2(self._cnn_msg.masks[i]) == 255)
@@ -168,7 +168,7 @@ class SemanticMappingNode(object):
                             self._pub_pose.publish(res)
 
                         result.semanticObjects.append(semanticObject)
-                        objstring = objstring + ' ' + semanticObject.ObjectType + ', p=%.2f.' % (
+                        objstring = objstring + ' ' + semanticObject.objectType + ', p=%.2f.' % (
                             semanticObject.object.score)
 
                     self._pub_result.publish(result)

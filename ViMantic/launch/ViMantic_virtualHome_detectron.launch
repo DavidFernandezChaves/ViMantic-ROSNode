@@ -16,7 +16,7 @@
 
     ### RVIZ ###
     <node name="rviz_player" pkg="rviz" type="rviz"
-          args="-d $(find vimantic)/launch/ViMantic_VirtualHome_Detectron.rviz"/>
+          args="-d $(find vimantic)/launch/ViMantic_virtualHome_detectron.rviz"/>
 
 
 </launch>

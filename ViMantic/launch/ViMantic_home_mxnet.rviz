@@ -174,7 +174,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: false
-      Image Topic: /ViMantic/ToCNN
+      Image Topic: /rr_mxnet_ssd/image
       Max Value: 1
       Median window: 5
       Min Value: 0

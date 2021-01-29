@@ -4,15 +4,14 @@
 vision_msgs/ObjectHypothesisWithPose object
 
 #ViMantic semantic knowledge:
-
 #Estimated object type according to the object recognizer.
-string ObjectType
+string objectType
 
 #ID in the ontology of the room in which the object is located.
-string RoomId
+string roomId
 
 #Type of the room in which the object is located.
-string Roomtype
+string roomtype
 
 # 3D object size
 geometry_msgs/Vector3 size

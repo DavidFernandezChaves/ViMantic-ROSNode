@@ -5,12 +5,12 @@
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
 
     ### Semantic_maping Robot@Home###
-    <node name="semantic_mapping" pkg="vimantic" type="ViMantic_robotHome_Detectron_node.py" output="screen">
+    <node name="semantic_mapping" pkg="vimantic" type="ViMantic_robotHome_mxnet_node.py" output="screen">
         <param name="topic_result" value="ViMantic/SemanticObjects"/>
         <param name="topic_intensity" value="RGBD_4_intensity"/>
         <param name="topic_depth" value="RGBD_4_depth"/>
         <param name="topic_republic" value="ViMantic/ToCNN"/>
-        <param name="topic_cnn" value="detectron2_ros/result"/>
+        <param name="topic_cnn" value="rr_mxnet/detections"/>
         <param name="input_angle" value="90"/>
         <param name="debug" value="true"/>
     </node>
@@ -24,6 +24,6 @@
 
     ### RVIZ ###
     <node name="rviz_player" pkg="rviz" type="rviz"
-          args="-d $(find vimantic)/launch/ViMantic_Home_Detectron.rviz"/>
+          args="-d $(find vimantic)/launch/ViMantic_home_mxnet.rviz"/>
 
 </launch>
