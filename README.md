@@ -48,8 +48,3 @@ Parameters:
         #Enables debug mode
 	    <param name="debug" value="true"/>
 ```
-
-## Examples
-<div align="center">
-  <img src="https://github.com/DavidFernandezChaves/ViMantic-Server/blob/master/Imgs/maps.PNG?raw=true"/>
-</div>
