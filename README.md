@@ -40,10 +40,7 @@ Parameters:
         <param name="threshold" value="0.50"/>
         
         #Angle of the input image
-        <param name="input_angle" value="90"/>
-        
-        #Enables the sending of the object's point cloud. (Disable in case of slow wireless networks)
-        <param name="point_cloud" value="false"/>        
+        <param name="input_angle" value="90"/>  
         
         #Enables debug mode
 	    <param name="debug" value="true"/>
