@@ -25,7 +25,7 @@ Parameters:
         <param name="topic_result" value="vimantic/SemanticObject"/>
         
         #Topic name where the RGB image is obtained
-	    <param name="topic_intensity" value="RGBD_4_intensity"/>
+	<param name="topic_intensity" value="RGBD_4_intensity"/>
 	    
         #Topic name where the depth image is obtained
         <param name="topic_depth" value="RGBD_4_depth"/>
@@ -43,5 +43,5 @@ Parameters:
         <param name="input_angle" value="90"/>  
         
         #Enables debug mode
-	    <param name="debug" value="true"/>
+	<param name="debug" value="true"/>
 ```
