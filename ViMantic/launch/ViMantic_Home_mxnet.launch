@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<launch>
+
+    ### ROSBRIDGE ###
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+
+    ### Semantic_maping Robot@Home###
+    <node name="semantic_mapping" pkg="vimantic" type="ViMantic_robotHome_mxnet_node.py" output="screen">
+        <param name="topic_result" value="ViMantic/SemanticObjects"/>
+        <param name="topic_intensity" value="RGBD_4_intensity"/>
+        <param name="topic_depth" value="RGBD_4_depth"/>
+        <param name="topic_republic" value="ViMantic/ToCNN"/>
+        <param name="topic_cnn" value="rr_mxnet/detections"/>
+        <param name="input_angle" value="90"/>
+        <param name="debug" value="true"/>
+    </node>
+
+    ### simulation ###
+    <node pkg="rosbag" type="play" name="player" output="log"
+          args="-r 0.6 --clock /home/omega100/Descargas/dataset/rosbagfile/anto-s1_fullhouse1_localization.bag"/>
+    <include file="$(find missions_pkg)/launch/simbot/simbot_map_server.launch">
+        <arg name="map_file" value="$(find missions_pkg)/maps/anto-s1.yaml"/>
+    </include>
+
+    ### RVIZ ###
+    <node name="rviz_player" pkg="rviz" type="rviz"
+          args="-d $(find vimantic)/launch/ViMantic_Home_mxnet.rviz"/>
+
+</launch>

@@ -1,0 +1,14 @@
+<launch>
+  <node name="rr_mxnet_segmentation" pkg="rr_mxnet" type="mxnet_segmentation_node.py" output="screen" >
+    <param name="image_topic" value="vimantic/imgRGBToCNN" />
+    <param name="mask_topic" value="~segmentation_mask" />
+    <param name="overlay_topic" value="~segmentation_overlay" />
+    <param name="enable_gpu" value="true" type="bool" />
+    <param name="avg_segmentation_frames" value="5" type="int" />
+    <param name="run_continuous" value="true" type="bool" />
+    <param name="mask_values" value="9, 12" />
+    <param name="throttle_timer" value="5" type="int" />
+    <param name="latency_threshold" value="1" type="int" />
+    <param name="network" value="yolo3_darknet53_coco" />
+  </node>
+</launch>

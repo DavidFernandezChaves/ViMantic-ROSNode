@@ -1,0 +1,69 @@
+<launch>
+  <node name="rr_mxnet_ssd" pkg="rr_mxnet" type="mxnet_ssd_node.py" output="screen" >
+
+    <param name="image_topic" value="ViMantic/ToCNN" />
+    <param name="mask_topic" value="/rr_mxnet_segmentation/segmentation_mask" />
+
+    <param name="detections_topic" value="rr_mxnet/detections" />
+
+    <param name="publish_detection_images" value="true" type="bool" />
+    <param name="image_detections_topic" value="~image" />
+
+    <param name="throttle_timer" value="0" type="int" />
+    <param name="threshold" value="0.5" type="double" />
+
+    <param name="start_enabled" value="true" type="bool" />
+    <param name="start_zoom_enabled" value="false" type="bool" />
+    <param name="level0_ncrops" value="2" type="int" />
+    <param name="level1_xcrops" value="4" type="int" />
+    <param name="level1_ycrops" value="2" type="int" />
+    <param name="level1_crop_size" value="380" type="int" />
+    <param name="enable_gpu" value="true" type="bool" />
+    <param name="batch_size" value="1" type="int" />
+    <param name="save_detections" value="false" type="bool" />
+    <param name="save_directory" value="/tmp" />
+
+    <!-- Pascal-voc dataset classes   -->
+<!--    <param name="classes" value="bed, bench, book, bottle, bowl, chair, clock, couch, diningtable, keyboard, laptop,-->
+<!--microwave, oven, pottedplant, refrigerator, sink, sofa, toilet, toothbrush, tvmonitor, tv" />-->
+
+    <!-- Coco dataset classes   -->
+    <param name="classes" value="person, bicycle, car, motorbike, aeroplane, bus, train, truck, boat, traffic light,
+fire hydrant, stop sign, parking meter, bench, bird, cat, dog, horse, sheep, cow, elephant, bear, zebra, giraffe, backpack,
+umbrella, handbag, tie, suitcase, frisbee, skis, snowboard, sports ball, kite, baseball bat, baseball glove, skateboard,
+surfboard, tennis racket, bottle, wine glass, cup, fork, knife, spoon, bowl, banana, apple, sandwich, orange, broccoli,
+carrot, hot dog, pizza, donut, cake, chair, sofa, pottedplant, bed, diningtable, toilet, tvmonitor, laptop, mouse,
+remote, keyboard, cell phone, microwave, oven, toaster, sink, refrigerator, book, clock, vase, scissors, teddy bear,
+hair drier, toothbrush"/>
+
+    <!-- CNN   -->
+    <param name="network" value="yolo3_darknet53_coco" />
+    <param name="model_filename" value="yolo3_darknet53_coco.params" />
+
+    <!-- SSD:  ssd_300_vgg16_atrous_coco  -->
+    <!-- SSD:  ssd_512_vgg16_atrous_coco -->
+    <!-- SSD:  ssd_300_resnet34_v1b_coco -->
+    <!-- SSD:  ssd_512_resnet50_v1_coco -->
+    <!-- SSD:  ssd_512_mobilenet1.0_coco -->
+
+    <!-- Faster-RCNN:  faster_rcnn_resnet50_v1b_coco -->
+    <!-- Faster-RCNN:  faster_rcnn_resnet101_v1d_coco -->
+    <!-- Faster-RCNN:  faster_rcnn_fpn_resnet50_v1b_coco -->
+    <!-- Faster-RCNN:  faster_rcnn_fpn_resnet101_v1d_coco -->
+    <!-- Faster-RCNN:  faster_rcnn_fpn_bn_resnet50_v1b_coco -->
+    <!-- Faster-RCNN:  faster_rcnn_fpn_syncbn_resnest50_coco -->
+    <!-- Faster-RCNN:  faster_rcnn_fpn_syncbn_resnest101_coco -->
+    <!-- Faster-RCNN:  faster_rcnn_fpn_syncbn_resnest269_coco -->
+
+    <!-- YOLO3:  yolo3_darknet53_coco -->
+    <!-- YOLO3:  yolo3_mobilenet1.0_coco -->
+
+    <!-- CenterNet:  center_net_resnet18_v1b_coco -->
+    <!-- CenterNet:  center_net_resnet18_v1b_dcnv2_coco -->
+    <!-- CenterNet:  center_net_resnet50_v1b_coco -->
+    <!-- CenterNet:  center_net_resnet50_v1b_dcnv2_coco -->
+    <!-- CenterNet:  center_net_resnet101_v1b_coco -->
+    <!-- CenterNet:  center_net_resnet101_v1b_dcnv2_coco -->
+
+  </node>
+</launch>
