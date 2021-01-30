@@ -11,7 +11,7 @@ string objectType
 string roomId
 
 #Type of the room in which the object is located.
-string roomtype
+string roomType
 
 # 3D object size
 geometry_msgs/Vector3 size
