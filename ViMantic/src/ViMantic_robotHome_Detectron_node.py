@@ -17,7 +17,7 @@ from vimantic.msg import SemanticObject, SemanticObjectArray
 from sensor_msgs.msg import Image
 
 
-class SemanticMappingNode(object):
+class ViManticNode(object):
     def __init__(self):
         rospy.logwarn("Initializing")
 
@@ -238,8 +238,8 @@ class SemanticMappingNode(object):
 
 
 def main(argv):
-    rospy.init_node('semantic_mapping')
-    node = SemanticMappingNode()
+    rospy.init_node('ViMantic')
+    node = ViManticNode()
     node.run()
 
 

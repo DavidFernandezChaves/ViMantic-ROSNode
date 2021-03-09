@@ -186,7 +186,7 @@ Visualization Manager:
       Length: 1
       Name: Axes
       Radius: 0.10000000149011612
-      Reference Frame: ws://192.168.0.20
+      Reference Frame: ws://192.168.0.12
       Value: true
     - Alpha: 1
       Axes Length: 1
@@ -205,7 +205,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /detectron2_ros/visualization
+      Image Topic: /ViMantic/ToCNN
       Max Value: 1
       Median window: 5
       Min Value: 0
@@ -243,7 +243,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 17.073205947875977
+      Distance: 26.865020751953125
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1

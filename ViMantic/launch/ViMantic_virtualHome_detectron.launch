@@ -6,10 +6,10 @@
 
     ### Semantic_maping Virtual###
     <node name="semantic_mapping" pkg="vimantic" type="ViMantic_VirtualHome_Detectron_node.py" output="screen">
-        <param name="topic_result" value="vimantic/SemanticObjects"/>
+        <param name="topic_result" value="ViMantic/SemanticObjects"/>
+        <param name="topic_virtualCameraRGBD" value="ViMantic/VirtualCameraRGBD"/>
+        <param name="topic_republic" value="ViMantic/ToCNN"/>
         <param name="topic_cnn" value="detectron2_ros/result"/>
-        <param name="threshold" value="0.20"/>
-        <param name="point_cloud" value="false"/>
         <param name="debug" value="true"/>
         <param name="record_times" value="false"/>
     </node>

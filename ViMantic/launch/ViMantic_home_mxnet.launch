@@ -17,9 +17,9 @@
 
     ### simulation ###
     <node pkg="rosbag" type="play" name="player" output="log"
-          args="-r 0.6 --clock /home/omega100/Descargas/dataset/rosbagfile/anto-s1_fullhouse1_localization.bag"/>
+          args="-r 0.4 --clock /home/omega100/Descargas/dataset/rosbagfile/alma-s1_fullhouse1_localization.bag"/>
     <include file="$(find missions_pkg)/launch/simbot/simbot_map_server.launch">
-        <arg name="map_file" value="$(find missions_pkg)/maps/anto-s1.yaml"/>
+        <arg name="map_file" value="$(find missions_pkg)/maps/alma-s1.yaml"/>
     </include>
 
     ### RVIZ ###

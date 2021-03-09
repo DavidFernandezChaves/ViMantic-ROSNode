@@ -161,9 +161,9 @@ class ViMantic:
                     [x_max, y_max] = self.px2cm(int(box.center.x + box.size_x / 2), int(box.center.y + box.size_y / 2),
                                                 img_depth)
 
-                    scale_x = x_max - x_min
-                    scale_y = y_max - y_min
-                    scale_z = z_clipping.max() - z_clipping.min()
+                    scale_x = abs(x_max - x_min)
+                    scale_y = abs(y_max - y_min)
+                    scale_z = abs(z_clipping.max() - z_clipping.min())
 
                     semanticObject.size = Vector3(scale_x, scale_y, scale_z)
 

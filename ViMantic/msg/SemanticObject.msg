@@ -10,6 +10,9 @@ string objectType
 #ID in the ontology of the room in which the object is located.
 string roomId
 
+#Number of times this object has been recognised by the system
+uint32 detections
+
 #Type of the room in which the object is located.
 string roomType
 
