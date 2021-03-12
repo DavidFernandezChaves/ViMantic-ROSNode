@@ -95,7 +95,7 @@ class RosMxNetSSD:
             self.pub_img_compressed_detections = rospy.Publisher(self.image_detections_topic + "/compressed",
                                                                  CompressedImage, queue_size=1)
 
-        rospy.loginfo("[MxNet Initialized with model %s]", self.model_filename)
+        rospy.logwarn("[MxNet Initialized with model %s]", self.model_filename)
 
     def load_param(self, param, default=None):
         new_param = rospy.get_param(param, default)

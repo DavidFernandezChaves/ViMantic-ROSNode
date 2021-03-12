@@ -5,7 +5,7 @@
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
 
     ### Semantic_maping Robot@Home###
-    <node name="semantic_mapping" pkg="vimantic" type="ViMantic_robotHome_mxnet_node.py" output="screen">
+    <node name="semantic_mapping" pkg="vimantic" type="ViMantic_RobotAtHome_mxnet_node.py" output="screen">
         <param name="topic_result" value="ViMantic/SemanticObjects"/>
         <param name="topic_intensity" value="RGBD_4_intensity"/>
         <param name="topic_depth" value="RGBD_4_depth"/>
@@ -24,6 +24,6 @@
 
     ### RVIZ ###
     <node name="rviz_player" pkg="rviz" type="rviz"
-          args="-d $(find vimantic)/launch/ViMantic_home_mxnet.rviz"/>
+          args="-d $(find vimantic)/launch/ViMantic_RobotAtHome_mxnet.rviz"/>
 
 </launch>
