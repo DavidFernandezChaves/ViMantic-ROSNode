@@ -9,9 +9,10 @@ import rospy
 import tf2_geometry_msgs
 import tf2_ros
 from cv_bridge import CvBridge, CvBridgeError
-from geometry_msgs.msg import PoseStamped, Point, Vector3
+from geometry_msgs.msg import PoseStamped, Point, Vector3, PoseWithCovariance
 from sensor_msgs.msg import Image, CompressedImage
 from vimantic.msg import SemanticObject, SemanticObjectArray
+from vision_msgs.msg import ObjectHypothesis
 
 
 class ViManticNode(object):
@@ -50,7 +51,7 @@ class ViManticNode(object):
         rospy.Subscriber(self.image_topic, CompressedImage, self.callbackVirtualImage, queue_size=10)
 
         tf2_ros.TransformListener(self._tfBuffer)
-        self.start_time = time.time()
+        self.start_time = 0
         rospy.logwarn("Initialized")
 
     def run(self):
@@ -59,7 +60,7 @@ class ViManticNode(object):
 
         while not rospy.is_shutdown():
             # Republish last img
-            if self._waiting_cnn and self._tries > 50:
+            if self._waiting_cnn and self._tries > 200:
                 self._pub_repub.publish(self._bridge.cv2_to_imgmsg(self._last_msg[1], 'rgb8'))
                 self._waiting_cnn = False
                 rospy.logwarn("[ViMantic] CNN does not respond, trying again.")
@@ -85,9 +86,12 @@ class ViManticNode(object):
             self._pub_repub.publish(self._bridge.cv2_to_imgmsg(self._last_msg[1], 'rgb8'))
             self._tries = 0
             self._waiting_cnn = True
+            if self.start_time == 0:
+                self.start_time = time.time()
 
     def callback_new_detection(self, result_cnn):
         if self._waiting_cnn:
+            self._image_counter = self._image_counter + 1
             if (self._image_counter % 11) == 10:
                 rospy.loginfo("Images detected per second=%.2f",
                               float(self._image_counter) / (time.time() - self.start_time))
@@ -117,9 +121,11 @@ class ViManticNode(object):
                 for i in range(len(result_cnn.class_names)):
 
                     semanticObject = SemanticObject()
+                    det = ObjectHypothesis()
+                    det.id = result_cnn.class_names[i]
+                    det.score = result_cnn.scores[i]
+                    semanticObject.scores.append(det)
 
-                    semanticObject.object.score = result_cnn.scores[i]
-                    semanticObject.objectType = result_cnn.class_names[i]
 
                     try:
                         mask = (self._bridge.imgmsg_to_cv2(result_cnn.masks[i]) == 255)
@@ -166,13 +172,15 @@ class ViManticNode(object):
                     p1.pose.position = Point(z_center, x[y_center, x_center], y[y_center, x_center])
                     p1.pose.orientation.w = 1.0  # Neutral orientation
                     ans = tf2_geometry_msgs.do_transform_pose(p1, data_transform)
-                    semanticObject.object.pose.pose = ans.pose
+
+                    semanticObject.pose = PoseWithCovariance()
+                    semanticObject.pose.pose = ans.pose
 
                     self._pub_pose.publish(ans)
 
                     result.semanticObjects.append(semanticObject)
-                    objstring = objstring + ' ' + semanticObject.objectType + ', p=%.2f.' % (
-                        semanticObject.object.score)
+                    objstring = objstring + ' ' + det.id + ', p=%.2f.' % (
+                        det.score)
 
                 self._pub_result.publish(result)
                 rospy.loginfo(objstring)

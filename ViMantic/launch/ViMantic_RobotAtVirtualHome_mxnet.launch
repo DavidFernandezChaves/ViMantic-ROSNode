@@ -10,6 +10,7 @@
         <param name="topic_virtualCameraRGBD" value="RobotAtVirtualHome/VirtualCameraRGBD"/>
         <param name="topic_republic" value="ViMantic/ToCNN"/>
         <param name="topic_cnn" value="rr_mxnet/detections"/>
+        <param name="threshold" value="0.01"/>
         <param name="debug" value="true"/>
     </node>
 

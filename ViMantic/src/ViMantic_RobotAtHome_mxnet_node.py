@@ -10,7 +10,8 @@ from cv_bridge import CvBridge, CvBridgeError
 from geometry_msgs.msg import PoseStamped, PoseWithCovariance, Point, Vector3
 from sensor_msgs.msg import Image
 from vimantic.msg import SemanticObject, SemanticObjectArray
-from vision_msgs.msg import Detection2DArray
+from vision_msgs.msg import Detection2DArray, ObjectHypothesis
+
 
 class ViMantic:
     def __init__(self):
@@ -24,6 +25,7 @@ class ViMantic:
         self.cnn_topic = self.load_param('~topic_cnn')
         self.image_toCNN = self.load_param('~topic_republic', 'ViMantic/ToCNN')
         self.input_angle = self.load_param('~input_angle', 0)
+        self.threshold = self.load_param('~threshold', 0.5)
         self.debug = self.load_param('~debug', False)
 
         # Camera calibration
@@ -59,14 +61,17 @@ class ViMantic:
         self.start_time = time.time()
         rospy.logwarn("Initialized")
 
+    def run(self):
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
 
             # Republish last img
-            if self._waiting_cnn and self._tries > 50:
+            if self._waiting_cnn:
                 self._pub_repub.publish(self._bridge.cv2_to_imgmsg(self._last_msg[1], 'rgb8'))
+
+            if self._waiting_cnn and self._tries > 200:
                 self._waiting_cnn = False
-                rospy.logwarn("[ViMantic] CNN does not respond, trying again.")
+                rospy.logwarn("[ViMantic] CNN does not respond.")
             else:
                 self._tries += 1
 
@@ -86,6 +91,7 @@ class ViMantic:
                 img_depth = self._bridge.imgmsg_to_cv2(depth_msg, "16UC1")
             except CvBridgeError as e:
                 print(e)
+                return
 
             if self.input_angle != 0:
                 img_rgb = self.rotate_image(img_rgb, self.input_angle)
@@ -129,65 +135,89 @@ class ViMantic:
                 result.header = data_header
                 result.header.frame_id = "/map"
                 objstring = 'Detected:'
-                for i in range(len(result_cnn.detections)):
-                    semanticObject = SemanticObject()
+                detections = result_cnn.detections
+                detections.sort(key=lambda x: x.bbox)
 
-                    semanticObject.object.score = result_cnn.detections[i].results[0].score
-                    semanticObject.objectType = result_cnn.detections[i].results[0].id
+                index = 0
 
-                    box = result_cnn.detections[i].bbox
+                while index < len(detections):
 
-                    z_clipping = img_depth[int(box.center.x - box.size_x / 3):int(box.center.x + box.size_x / 3),
-                                 int(box.center.y - box.size_y / 3):int(box.center.y + box.size_y / 3)]
+                    if detections[index].results[0].score > self.threshold:
 
-                    if len(z_clipping) == 0:
-                        return
+                        semanticObject = SemanticObject()
 
-                    # Bandpass filter with Z data
-                    top_margin = (z_clipping.max() - z_clipping.min()) * 0.9 + z_clipping.min()
-                    bottom_margin = (z_clipping.max() - z_clipping.min()) * 0.1 + z_clipping.min()
+                        box = detections[index].bbox
 
-                    mask2 = np.logical_and(z_clipping > bottom_margin, z_clipping < top_margin)
+                        z_clipping = img_depth[int(box.center.x - box.size_x / 3):int(box.center.x + box.size_x / 3),
+                                     int(box.center.y - box.size_y / 3):int(box.center.y + box.size_y / 3)]
 
-                    z_clipping = z_clipping[mask2]
+                        if len(z_clipping) == 0:
+                            return
 
-                    if len(z_clipping) == 0:
-                        return
+                        # Bandpass filter with Z data
+                        top_margin = (z_clipping.max() - z_clipping.min()) * 0.9 + z_clipping.min()
+                        bottom_margin = (z_clipping.max() - z_clipping.min()) * 0.1 + z_clipping.min()
 
-                    [x_min, y_min] = self.px2cm(int(box.center.x - box.size_x / 2), int(box.center.y - box.size_y / 2),
-                                                img_depth)
-                    [x_max, y_max] = self.px2cm(int(box.center.x + box.size_x / 2), int(box.center.y + box.size_y / 2),
-                                                img_depth)
+                        mask2 = np.logical_and(z_clipping > bottom_margin, z_clipping < top_margin)
 
-                    scale_x = abs(x_max - x_min)
-                    scale_y = abs(y_max - y_min)
-                    scale_z = abs(z_clipping.max() - z_clipping.min())
+                        z_clipping = z_clipping[mask2]
 
-                    semanticObject.size = Vector3(scale_x, scale_y, scale_z)
+                        if len(z_clipping) == 0:
+                            return
 
-                    # Calculate the center
-                    [x_center, y_center] = self.px2cm(box.center.x, box.center.y, img_depth)
-                    z_center = (float(scale_z / 2) + np.average(z_clipping))
+                        [x_min, y_min] = self.px2cm(int(box.center.x - box.size_x / 2),
+                                                    int(box.center.y - box.size_y / 2),
+                                                    img_depth)
+                        [x_max, y_max] = self.px2cm(int(box.center.x + box.size_x / 2),
+                                                    int(box.center.y + box.size_y / 2),
+                                                    img_depth)
 
-                    # Transformed the center of the object to the map reference system
-                    p1 = PoseStamped()
-                    p1.header = data_header
+                        scale_x = abs(x_max - x_min)
+                        scale_y = abs(y_max - y_min)
+                        scale_z = abs(z_clipping.max() - z_clipping.min())
 
-                    p1.pose.position = Point(-x_center, y_center, -z_center)
-                    p1.pose.orientation.w = 1.0  # Neutral orientation
-                    ans = tf2_geometry_msgs.do_transform_pose(p1, data_transform)
+                        semanticObject.size = Vector3(scale_x, scale_y, scale_z)
 
-                    semanticObject.object.pose = PoseWithCovariance()
-                    semanticObject.object.pose.pose = ans.pose
+                        # Calculate the center
+                        [x_center, y_center] = self.px2cm(box.center.x, box.center.y, img_depth)
+                        z_center = (float(scale_z / 2) + np.average(z_clipping))
 
+                        # Transformed the center of the object to the map reference system
+                        p1 = PoseStamped()
+                        p1.header = data_header
+
+                        p1.pose.position = Point(-x_center, y_center, -z_center)
+                        p1.pose.orientation.w = 1.0  # Neutral orientation
+                        ans = tf2_geometry_msgs.do_transform_pose(p1, data_transform)
+
+                        semanticObject.pose = PoseWithCovariance()
+                        semanticObject.pose.pose = ans.pose
+                        det = ObjectHypothesis()
+                        det.id = detections[index].results[0].id
+                        det.score = detections[index].results[0].score
+
+                        semanticObject.scores = [det]
+
+                        objstring = objstring + ' [' + det.id + ', p=%.2f' % det.score
+
+                        while (index + 1) < len(detections) and detections[index].bbox == detections[index + 1].bbox:
+                            index += 1
+                            objstring = objstring + ' / '
+                            det = ObjectHypothesis()
+                            det.id = detections[index].results[0].id
+                            det.score = detections[index].results[0].score
+                            semanticObject.scores.append(det)
+                            objstring = objstring + det.id + ', p=%.2f' % det.score
+
+                        result.semanticObjects.append(semanticObject)
+                        objstring = objstring + '] '
+
+                    index += 1
+
+                if len(result.semanticObjects) > 0:
                     self._pub_pose.publish(ans)
-
-                    result.semanticObjects.append(semanticObject)
-                    objstring = objstring + ' ' + semanticObject.objectType + ', p=%.2f.' % (
-                        semanticObject.object.score)
-
-                self._pub_result.publish(result)
-                rospy.loginfo(objstring)
+                    self._pub_result.publish(result)
+                    rospy.loginfo(objstring)
 
             self._waiting_cnn = False
 
@@ -208,4 +238,5 @@ class ViMantic:
 if __name__ == '__main__':
     rospy.init_node("ViMantic", anonymous=False, log_level=rospy.INFO)
     node = ViMantic()
+    node.run()
     rospy.spin()
