@@ -7,7 +7,6 @@ find_package(catkin REQUIRED COMPONENTS
   #std_msgs
   geometry_msgs
   sensor_msgs
-  vision_msgs
   cv_bridge
   #genmsg
   #actionlib_msgs
@@ -17,6 +16,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate messages in the 'msg' folder
 add_message_files(
   FILES
+  Detection.msg
+  DetectionArray.msg
+  ObjectHypothesis.msg
   SemanticObject.msg
   SemanticObjectArray.msg
   SemanticRoom.msg
@@ -29,7 +31,6 @@ generate_messages(
   #std_msgs
   geometry_msgs
   sensor_msgs
-  vision_msgs
   #actionlib_msgs
 )
 
@@ -39,7 +40,6 @@ catkin_package(
    geometry_msgs
    #std_msgs
    sensor_msgs
-   vision_msgs 
    message_runtime
 )
 
