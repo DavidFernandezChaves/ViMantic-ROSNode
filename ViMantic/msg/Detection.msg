@@ -2,9 +2,6 @@
 
 ObjectHypothesis[] scores
 
-#Pose from viewed:
-geometry_msgs/Pose origin
-
 #ViMantic semantic knowledge:
 geometry_msgs/Pose pose
 

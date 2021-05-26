@@ -91,9 +91,10 @@ class ViManticNode(object):
                 detections = DetectionArray()
                 detections.header = self._last_msg[0]
                 detections.header.frame_id = "/map"
+                detections.origin = self._last_msg[4]
 
                 # Initializing console message
-                obj_stringstring = 'Detected:'
+                obj_string = 'Detected:'
 
                 for idx in range(len(self._last_cnn_result.class_names)):
 
@@ -102,7 +103,6 @@ class ViManticNode(object):
                     det.id = self._last_cnn_result.class_names[idx]
                     det.score = self._last_cnn_result.scores[idx]
                     detection.scores.append(det)
-                    detection.origin = self._last_msg[4]
 
                     try:
                         mask = (self._bridge.imgmsg_to_cv2(self._last_cnn_result.masks[idx]) == 255)
@@ -171,10 +171,10 @@ class ViManticNode(object):
                     self._pub_pose.publish(pose_result)
 
                     detections.detections.append(detection)
-                    obj_stringstring = obj_stringstring + ' ' + det.id + ', p=%.2f.' % det.score
+                    obj_string = obj_string + ' ' + det.id + ', p=%.2f.' % det.score
 
                 self._pub_result.publish(detections)
-                rospy.loginfo(obj_stringstring)
+                rospy.loginfo(obj_string)
 
                 self._flag_cnn = False
                 self._flag_processing = False
