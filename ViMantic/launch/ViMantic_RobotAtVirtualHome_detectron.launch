@@ -6,12 +6,17 @@
 
     ### Semantic_maping Virtual###
     <node name="semantic_mapping" pkg="vimantic" type="ViMantic_RobotAtVirtualHome_detectron_node.py" output="screen">
-        <param name="topic_result" value="ViMantic/SemanticObjects"/>
+        <param name="topic_result" value="ViMantic/Detections"/>
         <param name="topic_virtualCameraRGBD" value="RobotAtVirtualHome/VirtualCameraRGBD"/>
         <param name="topic_republic" value="ViMantic/ToCNN"/>
         <param name="topic_cnn" value="detectron2_ros/result"/>
+        <param name="n_steps_fitting" value="180"/>
         <param name="debug" value="true"/>
     </node>
+
+    ### NAVIGATION ###
+    <arg name="map_file" value="$(find vimantic)/maps/ViMantic_House1.yaml"/>
+    <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" launch-prefix=""/>
 
     ### RVIZ ###
     <node name="rviz_player" pkg="rviz" type="rviz"

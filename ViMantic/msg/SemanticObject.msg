@@ -1,13 +1,11 @@
 #Define a 3D object with semantic information in ViMantic.
 
-
 string id
 
-vision_msgs/ObjectHypothesis[] scores
+ObjectHypothesis[] scores
 
 #ViMantic semantic knowledge:
-
-geometry_msgs/PoseWithCovariance pose
+geometry_msgs/Pose pose
 
 #ID in the ontology of the room in which the object is located.
 string roomId
