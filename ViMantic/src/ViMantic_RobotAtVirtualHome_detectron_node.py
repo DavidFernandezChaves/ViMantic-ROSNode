@@ -39,8 +39,9 @@ class ViManticNode(object):
         self.debug = self.load_param('~debug', False)
 
         # Orientation Fitting Variables
-        theta = (180.0 / self.n_steps_fitting) * pi / 180.0
-        self._R = np.asarray([[cos(theta), -sin(theta), 0], [sin(theta), cos(theta), 0], [0, 0, 1]])
+        theta = (89.00 / self.n_steps_fitting) * pi / 180.0
+        #self._R = np.asarray([[cos(theta), -sin(theta), 0], [sin(theta), cos(theta), 0], [0, 0, 1]])
+        self._R = np.asarray([[cos(theta), 0, sin(theta)], [0, 1, 0], [-sin(theta), 0, cos(theta)]])
 
         # Camera Calibration
         self._cx = 320
@@ -121,21 +122,18 @@ class ViManticNode(object):
                     std = np.std(z_)
 
                     # Bandpass filter with Z data
-                    top_margin = mean + 2.0 * std
-                    bottom_margin = mean - 2.0 * std
+                    top_margin = mean + 1.5 * std
+                    bottom_margin = mean - 1.5 * std
                     filtered_mask = np.logical_and(z_ > bottom_margin, z_ < top_margin)
 
                     # Obtain filtered point cloud
+                    # TODO: Probar a crear point cloud cambiando z por y
                     point_cloud = np.array([x_[filtered_mask].reshape(-1),
                                             y_[filtered_mask].reshape(-1),
                                             z_[filtered_mask].reshape(-1)]).T
 
                     pcd = o3d.geometry.PointCloud()
                     pcd.points = o3d.utility.Vector3dVector(point_cloud)
-
-
-
-
 
                     best_angle = 0
                     best_obb = pcd.get_axis_aligned_bounding_box()
@@ -150,10 +148,11 @@ class ViManticNode(object):
                         if obb.volume() < volume:
                             best_obb = obb
                             volume = obb.volume()
-                            best_angle = (i + 1) * 180.0 / self.n_steps_fitting
+                            best_angle = (i + 1) * 89.0 / self.n_steps_fitting
 
                     # Size
-                    detection.size = Vector3(*best_obb.get_extent())
+                    scale = best_obb.get_extent()
+                    detection.size = Vector3(scale[0], scale[1], scale[2])
 
                     # Position
                     position = best_obb.get_center()
@@ -165,7 +164,8 @@ class ViManticNode(object):
                     p1.pose.orientation.w = 1.0  # Neutral orientation
                     pose_result = tf2_geometry_msgs.do_transform_pose(p1, self._last_msg[3])
 
-                    pose_result.pose.orientation = Quaternion(*quaternion_from_euler(0.0, 0.0, best_angle*pi/180.0, axes = 'rxyz'))
+                    pose_result.pose.orientation = Quaternion(*quaternion_from_euler(0.0, 0.0, best_angle*pi/180.0,
+                                                                                     axes = 'rxyz'))
 
                     detection.pose = pose_result.pose
                     self._pub_pose.publish(pose_result)
