@@ -126,6 +126,9 @@ class ViManticNode(object):
                     kernel = np.ones((10,10),np.uint8)
                     mask = cv2.erode(np.float32(mask),kernel).astype(bool)
 
+                    if np.sum(mask) == 0:
+                        break
+
                     # Get detected object point cloud
                     x_ = x[mask]
                     y_ = y[mask]
@@ -140,6 +143,9 @@ class ViManticNode(object):
                     bottom_margin = mean - 1.5 * std
                     filtered_mask = np.logical_and(z_ > bottom_margin, z_ < top_margin)
 
+                    if np.sum(filtered_mask) == 0:
+                        break
+
                     # Obtain filtered point cloud
                     point_cloud = np.array([x_[filtered_mask].reshape(-1),
                                             y_[filtered_mask].reshape(-1),
@@ -150,6 +156,9 @@ class ViManticNode(object):
                     _, ind = pcd.remove_radius_outlier(nb_points=30, radius=0.05)
                     # self.display_inlier_outlier(pcd, ind)
                     pcd = pcd.select_down_sample(ind)
+
+                    if not pcd.has_points():
+                        break
 
                    # labels = np.array(pcd.cluster_dbscan(eps=0.006, min_points=10, print_progress=True))
                    #
