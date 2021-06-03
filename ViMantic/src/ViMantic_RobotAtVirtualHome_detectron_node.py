@@ -9,6 +9,7 @@ import open3d as o3d
 import rospy
 import tf2_geometry_msgs
 import tf2_ros
+import matplotlib.cm as plt
 from math import pi, sin, cos
 from cv_bridge import CvBridge, CvBridgeError
 from tf.transformations import quaternion_from_euler
@@ -35,12 +36,12 @@ class ViManticNode(object):
         self.semantic_topic = self.load_param('~topic_result', 'ViMantic/Detections')
         self.cnn_topic = self.load_param('~topic_cnn', 'detectron2_ros/result')
         self.image_toCNN = self.load_param('~topic_republic', 'ViMantic/ToCNN')
-        self.n_steps_fitting = self.load_param('~n_steps_fitting', 180)
+        self.n_steps_fitting = self.load_param('~n_steps_fitting', 89)
         self.debug = self.load_param('~debug', False)
 
         # Orientation Fitting Variables
         theta = (89.00 / self.n_steps_fitting) * pi / 180.0
-        #self._R = np.asarray([[cos(theta), -sin(theta), 0], [sin(theta), cos(theta), 0], [0, 0, 1]])
+        # self._R = np.asarray([[cos(theta), -sin(theta), 0], [sin(theta), cos(theta), 0], [0, 0, 1]])
         self._R = np.asarray([[cos(theta), 0, sin(theta)], [0, 1, 0], [-sin(theta), 0, cos(theta)]])
 
         # Camera Calibration
@@ -74,6 +75,15 @@ class ViManticNode(object):
 
         rospy.logwarn("Initialized")
 
+    def display_inlier_outlier(self, cloud, ind):
+        inlier_cloud = cloud.select_down_sample(ind)
+        outlier_cloud = cloud.select_down_sample(ind, invert=True)
+
+        print("Showing outliers (red) and inliers (gray): ")
+        outlier_cloud.paint_uniform_color([1, 0, 0])
+        inlier_cloud.paint_uniform_color([0.8, 0.8, 0.8])
+        o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+
     def run(self):
 
         rate = rospy.Rate(self._publish_rate)
@@ -103,6 +113,7 @@ class ViManticNode(object):
                     det = ObjectHypothesis()
                     det.id = self._last_cnn_result.class_names[idx]
                     det.score = self._last_cnn_result.scores[idx]
+                    # det.fixedCorners = 8*[False]
                     detection.scores.append(det)
 
                     try:
@@ -111,6 +122,9 @@ class ViManticNode(object):
                     except CvBridgeError as e:
                         print(e)
                         continue
+
+                    kernel = np.ones((10,10),np.uint8)
+                    mask = cv2.erode(np.float32(mask),kernel).astype(bool)
 
                     # Get detected object point cloud
                     x_ = x[mask]
@@ -127,31 +141,49 @@ class ViManticNode(object):
                     filtered_mask = np.logical_and(z_ > bottom_margin, z_ < top_margin)
 
                     # Obtain filtered point cloud
-                    # TODO: Probar a crear point cloud cambiando z por y
                     point_cloud = np.array([x_[filtered_mask].reshape(-1),
                                             y_[filtered_mask].reshape(-1),
                                             z_[filtered_mask].reshape(-1)]).T
 
                     pcd = o3d.geometry.PointCloud()
                     pcd.points = o3d.utility.Vector3dVector(point_cloud)
+                    _, ind = pcd.remove_radius_outlier(nb_points=30, radius=0.05)
+                    # self.display_inlier_outlier(pcd, ind)
+                    pcd = pcd.select_down_sample(ind)
+
+                   # labels = np.array(pcd.cluster_dbscan(eps=0.006, min_points=10, print_progress=True))
+                   #
+                   #  max_label = labels.max()
+                   #  colors = plt.get_cmap("tab20")(labels / (max_label if max_label > 0 else 1))
+                   #  colors[labels < 0] = 0
+                   #  pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
+                   #  o3d.visualization.draw_geometries([pcd])
 
                     best_angle = 0
                     best_obb = pcd.get_axis_aligned_bounding_box()
                     volume = best_obb.volume()
 
-                    for i in range(self.n_steps_fitting):
+                    aabb = pcd.get_axis_aligned_bounding_box()
+                    aabb.color = (1, 0, 0)
+                    # o3d.visualization.draw_geometries([pcd, aabb])
 
+                    for i in range(self.n_steps_fitting):
                         pcd.rotate(self._R)
 
-                        obb = pcd.get_axis_aligned_bounding_box()
+                        aabb = pcd.get_axis_aligned_bounding_box()
+                        aabb.color = (1, 0, 0)
 
-                        if obb.volume() < volume:
-                            best_obb = obb
-                            volume = obb.volume()
+                        if aabb.volume() < volume:
+                            best_obb = aabb
+                            volume = aabb.volume()
                             best_angle = (i + 1) * 89.0 / self.n_steps_fitting
+                            # print("Es mejor este angulo: "+str(best_angle))
+
+                    # o3d.visualization.draw_geometries([pcd, aabb])
 
                     # Size
                     scale = best_obb.get_extent()
+                    print(str(scale))
                     detection.size = Vector3(scale[0], scale[1], scale[2])
 
                     # Position
@@ -164,8 +196,8 @@ class ViManticNode(object):
                     p1.pose.orientation.w = 1.0  # Neutral orientation
                     pose_result = tf2_geometry_msgs.do_transform_pose(p1, self._last_msg[3])
 
-                    pose_result.pose.orientation = Quaternion(*quaternion_from_euler(0.0, 0.0, best_angle*pi/180.0,
-                                                                                     axes = 'rxyz'))
+                    pose_result.pose.orientation = Quaternion(*quaternion_from_euler(0.0, 0.0, -best_angle * pi / 180.0,
+                                                                                     axes='rxyz'))
 
                     detection.pose = pose_result.pose
                     self._pub_pose.publish(pose_result)
