@@ -50,6 +50,7 @@ class ViManticNode(object):
         self._fx = 457.1429
         self._fy = 470.5882
         self._depth_range = 15
+        self._max_distance_obj = 10 # Maximum distance to observe an object (in meters)
 
         # General Variables
         self._last_msg = None
@@ -123,8 +124,8 @@ class ViManticNode(object):
                         print(e)
                         continue
 
-                    kernel = np.ones((10,10),np.uint8)
-                    mask = cv2.erode(np.float32(mask),kernel).astype(bool)
+                    #kernel = np.ones((10,10),np.uint8)
+                    #mask = cv2.erode(np.float32(mask),kernel).astype(bool)
 
                     if np.sum(mask) == 0:
                         break
@@ -150,6 +151,9 @@ class ViManticNode(object):
                     point_cloud = np.array([x_[filtered_mask].reshape(-1),
                                             y_[filtered_mask].reshape(-1),
                                             z_[filtered_mask].reshape(-1)]).T
+
+                    if np.mean(z_[filtered_mask]) > self._max_distance_obj:
+                        break
 
                     pcd = o3d.geometry.PointCloud()
                     pcd.points = o3d.utility.Vector3dVector(point_cloud)
