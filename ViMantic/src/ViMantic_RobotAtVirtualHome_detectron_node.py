@@ -37,6 +37,7 @@ class ViManticNode(object):
         self.cnn_topic = self.load_param('~topic_cnn', 'detectron2_ros/result')
         self.image_toCNN = self.load_param('~topic_republic', 'ViMantic/ToCNN')
         self.n_steps_fitting = self.load_param('~n_steps_fitting', 89)
+        self._min_size = self.load_param('~min_size', 0.05)
         self.debug = self.load_param('~debug', False)
 
         # Orientation Fitting Variables
@@ -110,11 +111,14 @@ class ViManticNode(object):
 
                 for idx in range(len(self._last_cnn_result.class_names)):
 
+                    # Remove person objects
+                    if self._last_cnn_result.class_names[idx] == "person":
+                        continue
+
                     detection = Detection()
                     det = ObjectHypothesis()
                     det.id = self._last_cnn_result.class_names[idx]
                     det.score = self._last_cnn_result.scores[idx]
-                    # det.fixedCorners = 8*[False]
                     detection.scores.append(det)
 
                     try:
@@ -128,7 +132,7 @@ class ViManticNode(object):
                     #mask = cv2.erode(np.float32(mask),kernel).astype(bool)
 
                     if np.sum(mask) == 0:
-                        break
+                        continue
 
                     # Get detected object point cloud
                     x_ = x[mask]
@@ -145,7 +149,7 @@ class ViManticNode(object):
                     filtered_mask = np.logical_and(z_ > bottom_margin, z_ < top_margin)
 
                     if np.sum(filtered_mask) == 0:
-                        break
+                        continue
 
                     # Obtain filtered point cloud
                     point_cloud = np.array([x_[filtered_mask].reshape(-1),
@@ -153,7 +157,7 @@ class ViManticNode(object):
                                             z_[filtered_mask].reshape(-1)]).T
 
                     if np.mean(z_[filtered_mask]) > self._max_distance_obj:
-                        break
+                        continue
 
                     pcd = o3d.geometry.PointCloud()
                     pcd.points = o3d.utility.Vector3dVector(point_cloud)
@@ -162,7 +166,7 @@ class ViManticNode(object):
                     pcd = pcd.select_down_sample(ind)
 
                     if not pcd.has_points():
-                        break
+                        continue
 
                    # labels = np.array(pcd.cluster_dbscan(eps=0.006, min_points=10, print_progress=True))
                    #
@@ -196,7 +200,10 @@ class ViManticNode(object):
 
                     # Size
                     scale = best_obb.get_extent()
-                    print(str(scale))
+
+                    if (scale[0] < self._min_size or scale[1] < self._min_size or scale[2] < self._min_size):
+                        continue
+
                     detection.size = Vector3(scale[0], scale[1], scale[2])
 
                     # Position

@@ -11,6 +11,7 @@
         <param name="topic_republic" value="ViMantic/ToCNN"/>
         <param name="topic_cnn" value="detectron2_ros/result"/>
         <param name="n_steps_fitting" value="89"/>
+        <param name="min_size" value="0.05"/>
         <param name="debug" value="true"/>
     </node>
 
