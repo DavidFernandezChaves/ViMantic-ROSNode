@@ -36,14 +36,13 @@ class ViManticNode(object):
         self.semantic_topic = self.load_param('~topic_result', 'ViMantic/Detections')
         self.cnn_topic = self.load_param('~topic_cnn', 'detectron2_ros/result')
         self.image_toCNN = self.load_param('~topic_republic', 'ViMantic/ToCNN')
-        self.n_steps_fitting = self.load_param('~n_steps_fitting', 89)
+        self.n_steps_fitting = self.load_param('~n_steps_fitting', 90)
         self._min_size = self.load_param('~min_size', 0.05)
         self.debug = self.load_param('~debug', False)
 
         # Orientation Fitting Variables
         theta = (89.00 / self.n_steps_fitting) * pi / 180.0
-        # self._R = np.asarray([[cos(theta), -sin(theta), 0], [sin(theta), cos(theta), 0], [0, 0, 1]])
-        self._R = np.asarray([[cos(theta), 0, sin(theta)], [0, 1, 0], [-sin(theta), 0, cos(theta)]])
+        self._R = self.y_rotation(theta)
 
         # Camera Calibration
         self._cx = 320
@@ -62,9 +61,6 @@ class ViManticNode(object):
         # Publishers
         self._pub_result = rospy.Publisher(self.semantic_topic, DetectionArray, queue_size=10)
         self._pub_processed_image = rospy.Publisher(self.image_toCNN, Image, queue_size=1)
-
-        if self.debug:
-            self._pub_pose = rospy.Publisher('ViMantic/detectedObject', PoseStamped, queue_size=1)
 
         # Subscribers
         rospy.Subscriber(self.cnn_topic, detectron2_ros.msg.Result, self.callback_new_detection)
@@ -193,34 +189,23 @@ class ViManticNode(object):
                         if aabb.volume() < volume:
                             best_obb = aabb
                             volume = aabb.volume()
-                            best_angle = (i + 1) * 89.0 / self.n_steps_fitting
-                            # print("Es mejor este angulo: "+str(best_angle))
+                            best_angle = (i + 1) * 90.0 / self.n_steps_fitting
 
-                    # o3d.visualization.draw_geometries([pcd, aabb])
-
-                    # Size
-                    scale = best_obb.get_extent()
-
-                    if (scale[0] < self._min_size or scale[1] < self._min_size or scale[2] < self._min_size):
+                    if detection.height[0] < self._min_size or detection.height[1] < self._min_size or detection.height[2] < self._min_size:
                         continue
 
-                    detection.size = Vector3(scale[0], scale[1], scale[2])
+                    detection.height = np.asarray(best_obb.get_extent())
 
-                    # Position
-                    position = best_obb.get_center()
+                    best_obb = o3d.geometry.OrientedBoundingBox(best_obb.get_center(),
+                                                                self.y_rotation(best_angle * pi / 180.0),
+                                                                detection.height)
 
-                    # Transform the center of the object to the map reference system
-                    p1 = PoseStamped()
-                    p1.header = self._last_msg[0]
-                    p1.pose.position = Point(position[2], position[0], position[1])
-                    p1.pose.orientation.w = 1.0  # Neutral orientation
-                    pose_result = tf2_geometry_msgs.do_transform_pose(p1, self._last_msg[3])
+                    detection.corners = []
 
-                    pose_result.pose.orientation = Quaternion(*quaternion_from_euler(0.0, 0.0, -best_angle * pi / 180.0,
-                                                                                     axes='rxyz'))
-
-                    detection.pose = pose_result.pose
-                    self._pub_pose.publish(pose_result)
+                    for pt in np.asarray(best_obb.get_box_points()):
+                        if pt[1] > best_obb.get_center()[1]:
+                            detection.corners.append(tf2_geometry_msgs.do_transform_point(Point(*pt),
+                                                                                          self._last_msg[3]).point)
 
                     detections.detections.append(detection)
                     obj_string = obj_string + ' ' + det.id + ', p=%.2f.' % det.score
@@ -308,6 +293,10 @@ class ViManticNode(object):
         img_depth = np.divide(im[:, :, 3], 255.0)
 
         return img_rgb, img_depth
+
+    @staticmethod
+    def y_rotation(theta):
+        return np.asarray([[cos(theta), 0, sin(theta)], [0, 1, 0], [-sin(theta), 0, cos(theta)]])
 
 
 def main(argv):

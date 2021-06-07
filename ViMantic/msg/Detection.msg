@@ -2,12 +2,12 @@
 
 ObjectHypothesis[] scores
 
-#ViMantic semantic knowledge:
-geometry_msgs/Pose pose
+# ViMantic semantic knowledge:
+# 0 -> top left // 1 -> top right // 2 -> down right // 3 -> down left
+geometry_msgs/Point[] corners
 
-# 3D object size
-geometry_msgs/Vector3 size
+# Height value:
+float64 height
 
-#Fixed Corners
-#std_msgs/Bool[] fixedCorners
-#bool[] fixedCorners
+# Fixed corners:
+uint8 fixed_corners
