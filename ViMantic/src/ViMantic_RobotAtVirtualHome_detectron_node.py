@@ -14,9 +14,10 @@ from math import pi, sin, cos
 from cv_bridge import CvBridge, CvBridgeError
 from tf.transformations import quaternion_from_euler
 
-from geometry_msgs.msg import PoseStamped, Point, Vector3, Pose, Quaternion
+from geometry_msgs.msg import PoseStamped, Point, Vector3, Pose, Quaternion, PointStamped
 from sensor_msgs.msg import Image, CompressedImage
 from vimantic.msg import Detection, DetectionArray, ObjectHypothesis
+
 
 class ViManticNode(object):
     def __init__(self):
@@ -36,13 +37,9 @@ class ViManticNode(object):
         self.semantic_topic = self.load_param('~topic_result', 'ViMantic/Detections')
         self.cnn_topic = self.load_param('~topic_cnn', 'detectron2_ros/result')
         self.image_toCNN = self.load_param('~topic_republic', 'ViMantic/ToCNN')
-        self.n_steps_fitting = self.load_param('~n_steps_fitting', 90)
+        self.step_fitting = self.load_param('~step_fitting', 0.5)
         self._min_size = self.load_param('~min_size', 0.05)
         self.debug = self.load_param('~debug', False)
-
-        # Orientation Fitting Variables
-        theta = (89.00 / self.n_steps_fitting) * pi / 180.0
-        self._R = self.y_rotation(theta)
 
         # Camera Calibration
         self._cx = 320
@@ -50,7 +47,7 @@ class ViManticNode(object):
         self._fx = 457.1429
         self._fy = 470.5882
         self._depth_range = 15
-        self._max_distance_obj = 10 # Maximum distance to observe an object (in meters)
+        self._max_distance_obj = 10  # Maximum distance to observe an object (in meters)
 
         # General Variables
         self._last_msg = None
@@ -124,8 +121,8 @@ class ViManticNode(object):
                         print(e)
                         continue
 
-                    #kernel = np.ones((10,10),np.uint8)
-                    #mask = cv2.erode(np.float32(mask),kernel).astype(bool)
+                    # kernel = np.ones((10,10),np.uint8)
+                    # mask = cv2.erode(np.float32(mask),kernel).astype(bool)
 
                     if np.sum(mask) == 0:
                         continue
@@ -164,48 +161,79 @@ class ViManticNode(object):
                     if not pcd.has_points():
                         continue
 
-                   # labels = np.array(pcd.cluster_dbscan(eps=0.006, min_points=10, print_progress=True))
-                   #
-                   #  max_label = labels.max()
-                   #  colors = plt.get_cmap("tab20")(labels / (max_label if max_label > 0 else 1))
-                   #  colors[labels < 0] = 0
-                   #  pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
-                   #  o3d.visualization.draw_geometries([pcd])
+                    # PointCloud Segmentation
+                    # labels = np.array(pcd.cluster_dbscan(eps=0.006, min_points=10, print_progress=True))
+                    #
+                    #  max_label = labels.max()
+                    #  colors = plt.get_cmap("tab20")(labels / (max_label if max_label > 0 else 1))
+                    #  colors[labels < 0] = 0
+                    #  pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
+                    #  o3d.visualization.draw_geometries([pcd])
 
-                    best_angle = 0
+                    # Get best Angle
+                    volume = pcd.get_axis_aligned_bounding_box().volume()
+                    angle_step = self.step_fitting * pi / 180.0
+                    pcd.rotate(self.y_rotation(angle_step))
+                    best_angle = angle_step
+
                     best_obb = pcd.get_axis_aligned_bounding_box()
-                    volume = best_obb.volume()
+                    volume_turn = best_obb.volume()
 
-                    aabb = pcd.get_axis_aligned_bounding_box()
-                    aabb.color = (1, 0, 0)
-                    # o3d.visualization.draw_geometries([pcd, aabb])
+                    if volume_turn > volume:
+                        angle_step *= -1
+                        volume = volume_turn
 
-                    for i in range(self.n_steps_fitting):
-                        pcd.rotate(self._R)
+                    while volume_turn <= volume:
+                        volume = volume_turn
+                        pcd.rotate(self.y_rotation(angle_step))
+                        volume_turn = pcd.get_axis_aligned_bounding_box().volume()
+                        best_angle += angle_step
 
-                        aabb = pcd.get_axis_aligned_bounding_box()
-                        aabb.color = (1, 0, 0)
+                    pcd.rotate(self.y_rotation(-angle_step))
+                    best_obb = pcd.get_axis_aligned_bounding_box()
+                    best_obb.color = (0, 1, 0)
+                    best_angle -= angle_step
 
-                        if aabb.volume() < volume:
-                            best_obb = aabb
-                            volume = aabb.volume()
-                            best_angle = (i + 1) * 90.0 / self.n_steps_fitting
+                    scale = np.asarray(best_obb.get_extent())
 
-                    if detection.height[0] < self._min_size or detection.height[1] < self._min_size or detection.height[2] < self._min_size:
+                    if scale[0] < self._min_size or scale[1] < self._min_size or scale[2] < self._min_size:
                         continue
 
-                    detection.height = np.asarray(best_obb.get_extent())
+                    # o3d.visualization.draw_geometries([best_pcd, best_obb])
+                    best_obb_1 = o3d.geometry.OrientedBoundingBox(best_obb.get_center(),
+                                                                  np.matmul(self.x_rotation(-10 * pi / 180.0),
+                                                                            self.y_rotation(-best_angle)), scale)
+                    corners = []
 
-                    best_obb = o3d.geometry.OrientedBoundingBox(best_obb.get_center(),
-                                                                self.y_rotation(best_angle * pi / 180.0),
-                                                                detection.height)
+                    z_center = 0
+                    for pt in np.asarray(best_obb_1.get_box_points()):
+                        global_point = tf2_geometry_msgs.do_transform_point(
+                            PointStamped(self._last_msg[0], Point(pt[2], pt[0], pt[1])), self._last_msg[3]).point
+                        corners.append(global_point)
+                        z_center += global_point.z
 
-                    detection.corners = []
+                    z_center /= len(corners)
 
-                    for pt in np.asarray(best_obb.get_box_points()):
-                        if pt[1] > best_obb.get_center()[1]:
-                            detection.corners.append(tf2_geometry_msgs.do_transform_point(Point(*pt),
-                                                                                          self._last_msg[3]).point)
+                    # Order corners
+                    top_corners = [corner for corner in corners if corner.z > z_center]
+                    top_corners.sort(key=lambda x: x.x, reverse=False)
+
+                    if top_corners[2].x - top_corners[1].x > 0.05 * scale[0]:
+                        ordered_corners = top_corners[:2]
+                        ordered_corners.sort(key=lambda x: x.y, reverse = False)
+                        remain_corners = top_corners[2:4]
+                        remain_corners.sort(key=lambda x: x.y, reverse = True)
+                        ordered_corners += remain_corners
+                    else:
+                        ordered_corners = top_corners[:3]
+                        ordered_corners.sort(key=lambda x: x.y, reverse=False)
+                        ordered_corners += [top_corners[3]]
+
+                    bottom_corners = [Point(corner.x, corner.y, corner.z - scale[1]) for corner in ordered_corners]
+                    detection.corners = ordered_corners + bottom_corners
+
+                    # Get fixed corners
+                    detection.fixed_corners = 1 << 0 | 1 << 1
 
                     detections.detections.append(detection)
                     obj_string = obj_string + ' ' + det.id + ', p=%.2f.' % det.score
@@ -249,6 +277,7 @@ class ViManticNode(object):
 
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                 rospy.logwarn("Failing to retrieve robot pose")
+                origin = Pose()
 
             self._last_msg = [img_msg.header, img_rgb, img_depth, transform, origin]
             self._pub_processed_image.publish(self._bridge.cv2_to_imgmsg(self._last_msg[1], 'rgb8'))
@@ -295,8 +324,16 @@ class ViManticNode(object):
         return img_rgb, img_depth
 
     @staticmethod
+    def x_rotation(theta):
+        return np.asarray([[1, 0, 0], [0, cos(theta), -sin(theta)], [0, sin(theta), cos(theta)]])
+
+    @staticmethod
     def y_rotation(theta):
         return np.asarray([[cos(theta), 0, sin(theta)], [0, 1, 0], [-sin(theta), 0, cos(theta)]])
+
+    @staticmethod
+    def z_rotation(theta):
+        return np.asarray([[cos(theta), -sin(theta), 0], [sin(theta), cos(theta), 0], [0, 0, 1]])
 
 
 def main(argv):

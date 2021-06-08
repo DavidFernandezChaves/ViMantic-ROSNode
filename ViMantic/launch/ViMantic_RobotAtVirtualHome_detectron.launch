@@ -10,7 +10,7 @@
         <param name="topic_virtualCameraRGBD" value="RobotAtVirtualHome/VirtualCameraRGBD"/>
         <param name="topic_republic" value="ViMantic/ToCNN"/>
         <param name="topic_cnn" value="detectron2_ros/result"/>
-        <param name="n_steps_fitting" value="90"/>
+        <param name="step_fitting" value="0.5"/>
         <param name="min_size" value="0.05"/>
         <param name="debug" value="true"/>
     </node>
