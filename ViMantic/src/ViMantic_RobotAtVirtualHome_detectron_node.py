@@ -121,8 +121,8 @@ class ViManticNode(object):
                         print(e)
                         continue
 
-                    # kernel = np.ones((10,10),np.uint8)
-                    # mask = cv2.erode(np.float32(mask),kernel).astype(bool)
+                    kernel = np.ones((3,3),np.uint8)
+                    mask = cv2.erode(np.float32(mask),kernel).astype(bool)
 
                     if np.sum(mask) == 0:
                         continue
@@ -191,7 +191,6 @@ class ViManticNode(object):
 
                     pcd.rotate(self.y_rotation(-angle_step))
                     best_obb = pcd.get_axis_aligned_bounding_box()
-                    best_obb.color = (0, 1, 0)
                     best_angle -= angle_step
 
                     scale = np.asarray(best_obb.get_extent())
@@ -200,40 +199,70 @@ class ViManticNode(object):
                         continue
 
                     # o3d.visualization.draw_geometries([best_pcd, best_obb])
-                    best_obb_1 = o3d.geometry.OrientedBoundingBox(best_obb.get_center(),
-                                                                  np.matmul(self.x_rotation(-10 * pi / 180.0),
-                                                                            self.y_rotation(-best_angle)), scale)
-                    corners = []
+                    oriented_bb = o3d.geometry.OrientedBoundingBox(best_obb.get_center(),
+                                                                   np.matmul(self.x_rotation(-10 * pi / 180.0),
+                                                                             self.y_rotation(-best_angle)), scale)
 
-                    z_center = 0
-                    for pt in np.asarray(best_obb_1.get_box_points()):
+                    detection.fixed_corners = 0
+                    image = self._last_msg[1]
+                    for i, pt in enumerate(np.asarray(oriented_bb.get_box_points())):
+                        px = int(self._cx - (pt[0] * self._fx / pt[2]))
+                        py = int(self._cy - (pt[1] * self._fy / pt[2]))
+
+                        if px < self._width - 1 and px > 0 and py < self._height - 1 and py > 0:
+                            # image = cv2.putText(image, str(i), (px, py), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
+                            #                     cv2.LINE_AA)
+                            if pt[2]-0.2 < z[py, px]:
+                                detection.fixed_corners |= 1 << i
+                                image = cv2.circle(image, (px, py), 10, (0, 0, 255), -1)
+                            else:
+                                image = cv2.circle(image, (px, py), 10, (0, 255, 0), -1)
+
+                    detection.fixed_corners &= ~(((~detection.fixed_corners) & 1 << 0) << 3)
+                    detection.fixed_corners &= ~(((~detection.fixed_corners) & 1 << 1) << 6)
+                    detection.fixed_corners &= ~(((~detection.fixed_corners) & 1 << 2) << 5)
+                    detection.fixed_corners &= ~(((~detection.fixed_corners) & 1 << 7) << 4)
+
+                    cv2.imshow("Paco",image)
+                    cv2.waitKey(10)
+
+                    # Transform local to global frame
+                    # corners = []
+                    detection.corners = []
+                    for i, pt in enumerate(np.asarray(oriented_bb.get_box_points())):
+                        # print("Punto original: " + str(pt))
                         global_point = tf2_geometry_msgs.do_transform_point(
                             PointStamped(self._last_msg[0], Point(pt[2], pt[0], pt[1])), self._last_msg[3]).point
-                        corners.append(global_point)
-                        z_center += global_point.z
-
-                    z_center /= len(corners)
+                        detection.corners.append(global_point)
 
                     # Order corners
-                    top_corners = [corner for corner in corners if corner.z > z_center]
-                    top_corners.sort(key=lambda x: x.x, reverse=False)
-
-                    if top_corners[2].x - top_corners[1].x > 0.05 * scale[0]:
-                        ordered_corners = top_corners[:2]
-                        ordered_corners.sort(key=lambda x: x.y, reverse = False)
-                        remain_corners = top_corners[2:4]
-                        remain_corners.sort(key=lambda x: x.y, reverse = True)
-                        ordered_corners += remain_corners
-                    else:
-                        ordered_corners = top_corners[:3]
-                        ordered_corners.sort(key=lambda x: x.y, reverse=False)
-                        ordered_corners += [top_corners[3]]
-
-                    bottom_corners = [Point(corner.x, corner.y, corner.z - scale[1]) for corner in ordered_corners]
-                    detection.corners = ordered_corners + bottom_corners
+                    # corners.sort(key=lambda x: x[0].z, reverse=False)
+                    # top_corners = corners[:4]
+                    # bottom_corners = corners[4:]
+                    #
+                    # top_corners.sort(key=lambda x: x[0].x, reverse=False)
+                    # bottom_corners.sort(key=lambda x: x[0].x, reverse=False)
+                    #
+                    # if top_corners[2][0].x - top_corners[1][0].x > 0.05 * scale[0]:
+                    #     ordered_corners = top_corners[:2]
+                    #     ordered_corners.sort(key=lambda x: x[0].y, reverse=False)
+                    #     remain_corners = top_corners[2:4]
+                    #     remain_corners.sort(key=lambda x: x[0].y, reverse=True)
+                    #     ordered_corners += remain_corners
+                    # else:
+                    #     ordered_corners = top_corners[:3]
+                    #     ordered_corners.sort(key=lambda x: x[0].y, reverse=False)
+                    #     ordered_corners += [top_corners[3]]
+                    #
+                    # bottom_corners = [[Point(corner[0].x, corner[0].y, corner[0].z - scale[1]),corner[1]] for corner in
+                    #                   ordered_corners]
+                    #
+                    # detection.corners = [pt[0] for pt in (ordered_corners + bottom_corners)]
 
                     # Get fixed corners
-                    detection.fixed_corners = 1 << 0 | 1 << 1
+                    # detection.fixed_corners = 0
+                    # for i, pt in enumerate(ordered_corners + bottom_corners):
+                    #     detection.fixed_corners |= pt[1] << i
 
                     detections.detections.append(detection)
                     obj_string = obj_string + ' ' + det.id + ', p=%.2f.' % det.score
@@ -288,8 +317,8 @@ class ViManticNode(object):
 
             if self._image_c is None and self._image_r is None:
                 # Generate a meshgrid where each pixel contains its pixel coordinates
-                rows, cols = img_depth.shape
-                self._image_c, self._image_r = np.meshgrid(np.arange(cols), np.arange(rows), sparse=True)
+                self._height, self._width = img_depth.shape
+                self._image_c, self._image_r = np.meshgrid(np.arange(self._width), np.arange(self._height), sparse=True)
             self._flag_processing = True
 
     def callback_new_detection(self, result_cnn):
