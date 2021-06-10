@@ -203,25 +203,27 @@ class ViManticNode(object):
                                                                    np.matmul(self.x_rotation(-10 * pi / 180.0),
                                                                              self.y_rotation(-best_angle)), scale)
 
-                    detection.fixed_corners = 0
+                    detection.occluded_corners = 0
                     image = self._last_msg[1]
                     for i, pt in enumerate(np.asarray(oriented_bb.get_box_points())):
                         px = int(self._cx - (pt[0] * self._fx / pt[2]))
                         py = int(self._cy - (pt[1] * self._fy / pt[2]))
 
-                        if px < self._width - 1 and px > 0 and py < self._height - 1 and py > 0:
+                        if px >= self._width - 1 or px <= 0 or py >= self._height - 1 or py <= 0:
                             # image = cv2.putText(image, str(i), (px, py), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
                             #                     cv2.LINE_AA)
-                            if pt[2]-0.2 < z[py, px]:
-                                detection.fixed_corners |= 1 << i
-                                image = cv2.circle(image, (px, py), 10, (0, 0, 255), -1)
-                            else:
-                                image = cv2.circle(image, (px, py), 10, (0, 255, 0), -1)
+                            detection.occluded_corners |= 1 << i
+                            image = cv2.circle(image, (px, py), 10, (0, 0, 255), -1)
+                        elif pt[2] - 0.2 > z[py, px]:
+                            detection.occluded_corners |= 1 << i
+                            image = cv2.circle(image, (px, py), 10, (0, 0, 255), -1)
+                        else:
+                            image = cv2.circle(image, (px, py), 10, (0, 255, 0), -1)
 
-                    detection.fixed_corners &= ~(((~detection.fixed_corners) & 1 << 0) << 3)
-                    detection.fixed_corners &= ~(((~detection.fixed_corners) & 1 << 1) << 6)
-                    detection.fixed_corners &= ~(((~detection.fixed_corners) & 1 << 2) << 5)
-                    detection.fixed_corners &= ~(((~detection.fixed_corners) & 1 << 7) << 4)
+                    detection.occluded_corners &= ~((detection.occluded_corners & 1 << 0) << 3)
+                    detection.occluded_corners &= ~((detection.occluded_corners & 1 << 1) << 5)
+                    detection.occluded_corners &= ~((detection.occluded_corners & 1 << 2) << 3)
+                    detection.occluded_corners &= ~((detection.occluded_corners & 1 << 7) >> 3)
 
                     cv2.imshow("Paco",image)
                     cv2.waitKey(10)

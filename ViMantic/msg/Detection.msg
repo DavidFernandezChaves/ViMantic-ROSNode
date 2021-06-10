@@ -7,4 +7,4 @@ ObjectHypothesis[] scores
 geometry_msgs/Point[] corners
 
 # Fixed corners:
-uint8 fixed_corners
+uint8 occluded_corners
