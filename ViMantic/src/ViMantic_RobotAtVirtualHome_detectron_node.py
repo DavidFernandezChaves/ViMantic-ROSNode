@@ -47,7 +47,8 @@ class ViManticNode(object):
         self._fx = 457.1429
         self._fy = 470.5882
         self._depth_range = 15
-        self._max_distance_obj = 10  # Maximum distance to observe an object (in meters)
+        self._max_z = 10  # Maximum distance to observe an object (in meters)
+        self._min_z = 1   # Minimum distance to observe an object (in meters)
 
         # General Variables
         self._last_msg = None
@@ -136,6 +137,9 @@ class ViManticNode(object):
                     mean = np.mean(z_)
                     std = np.std(z_)
 
+                    if mean < self._min_z or mean > self._max_z:
+                        continue
+
                     # Bandpass filter with Z data
                     top_margin = mean + 1.5 * std
                     bottom_margin = mean - 1.5 * std
@@ -149,8 +153,6 @@ class ViManticNode(object):
                                             y_[filtered_mask].reshape(-1),
                                             z_[filtered_mask].reshape(-1)]).T
 
-                    if np.mean(z_[filtered_mask]) > self._max_distance_obj:
-                        continue
 
                     pcd = o3d.geometry.PointCloud()
                     pcd.points = o3d.utility.Vector3dVector(point_cloud)
@@ -224,9 +226,11 @@ class ViManticNode(object):
                     detection.occluded_corners &= ~((detection.occluded_corners & 1 << 1) << 5)
                     detection.occluded_corners &= ~((detection.occluded_corners & 1 << 2) << 3)
                     detection.occluded_corners &= ~((detection.occluded_corners & 1 << 7) >> 3)
+                    detection.occluded_corners &= ~((detection.occluded_corners & 1 << 0) << 2)
+                    detection.occluded_corners &= ~((detection.occluded_corners & 1 << 1) << 6)
 
-                    cv2.imshow("Paco",image)
-                    cv2.waitKey(10)
+                    #cv2.imshow("Paco",image)
+                    #cv2.waitKey(1)
 
                     # Transform local to global frame
                     # corners = []
