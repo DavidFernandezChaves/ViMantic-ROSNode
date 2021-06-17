@@ -13,6 +13,7 @@ import matplotlib.cm as plt
 from math import pi, sin, cos
 from cv_bridge import CvBridge, CvBridgeError
 from tf.transformations import quaternion_from_euler
+from skimage.morphology import thin
 
 from geometry_msgs.msg import PoseStamped, Point, Vector3, Pose, Quaternion, PointStamped
 from sensor_msgs.msg import Image, CompressedImage
@@ -47,8 +48,6 @@ class ViManticNode(object):
         self._fx = 457.1429
         self._fy = 470.5882
         self._depth_range = 15
-        self._max_z = 4  # Maximum distance to observe an object (in meters)
-        self._min_z = 1   # Minimum distance to observe an object (in meters)
 
         # General Variables
         self._last_msg = None
@@ -122,8 +121,10 @@ class ViManticNode(object):
                         print(e)
                         continue
 
-                    kernel = np.ones((3,3),np.uint8)
-                    mask = cv2.erode(np.float32(mask),kernel).astype(bool)
+                    #kernel = np.ones((3,3),np.uint8)
+                    #mask = cv2.erode(np.float32(mask),kernel).astype(bool)
+                    mask = thin(mask, 15)
+
 
                     if np.sum(mask) == 0:
                         continue
@@ -136,9 +137,6 @@ class ViManticNode(object):
                     # Statistics from Z data
                     mean = np.mean(z_)
                     std = np.std(z_)
-
-                    if mean < self._min_z or mean > self._max_z:
-                        continue
 
                     # Bandpass filter with Z data
                     top_margin = mean + 1.5 * std
@@ -156,9 +154,9 @@ class ViManticNode(object):
 
                     pcd = o3d.geometry.PointCloud()
                     pcd.points = o3d.utility.Vector3dVector(point_cloud)
-                    _, ind = pcd.remove_radius_outlier(nb_points=30, radius=0.05)
+                    #_, ind = pcd.remove_radius_outlier(nb_points=30, radius=0.05)
                     # self.display_inlier_outlier(pcd, ind)
-                    pcd = pcd.select_down_sample(ind)
+                    #pcd = pcd.select_down_sample(ind)
 
                     if not pcd.has_points():
                         continue
@@ -211,7 +209,7 @@ class ViManticNode(object):
                         px = int(self._cx - (pt[0] * self._fx / pt[2]))
                         py = int(self._cy - (pt[1] * self._fy / pt[2]))
 
-                        if px >= self._width - 1 or px <= 0 or py >= self._height - 1 or py <= 0:
+                        if px >= self._width - 30 or px <= 30 or py >= self._height - 31 or py <= 30:
                             # image = cv2.putText(image, str(i), (px, py), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
                             #                     cv2.LINE_AA)
                             detection.occluded_corners |= 1 << i
@@ -228,7 +226,6 @@ class ViManticNode(object):
                     detection.occluded_corners |= ((detection.occluded_corners & (1 << 7)) >> 3)
                     detection.occluded_corners |= ((detection.occluded_corners & (1 << 0)) << 2)
                     detection.occluded_corners |= ((detection.occluded_corners & (1 << 1)) << 6)
-
                     """
                     for i, pt in enumerate(np.asarray(oriented_bb.get_box_points())):
                         px = int(self._cx - (pt[0] * self._fx / pt[2]))
@@ -237,11 +234,12 @@ class ViManticNode(object):
                             image = cv2.circle(image, (px, py), 10, (0, 0, 255), -1)
                         else:
                             image = cv2.circle(image, (px, py), 10, (0, 255, 0), -1)
-                            
+                    
+                    image = cv2.bitwise_and(image, image, mask=mask.astype(np.uint8))
                     cv2.imshow("Paco",image)
-                    cv2.waitKey(0)
-                    cv2.destroyAllWindows()
+                    cv2.waitKey(10)
                     """
+
                     # Transform local to global frame
                     # corners = []
                     detection.corners = []
