@@ -6,10 +6,6 @@ ViMantic is a distributed architecture for semantic mapping of environments usin
 - The model is automatically populated, i.e. it has a method to transform sensory data into high-level information, e.g. by recognizing objects.
 - ViMantic uses 3D virtual maps to represent the semantic knowledge acquired.
 
-<div align="center">
-  <img src="https://github.com/DavidFernandezChaves/ViMantic-Server/blob/master/Imgs/Head.PNG?raw=true"/>
-</div>
-
 ## Requirements
 - [ViMantic - Server](https://github.com/DavidFernandezChaves/ViMantic-Server)
 - [RosBridge](http://wiki.ros.org/rosbridge_suite)
