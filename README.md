@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="https://github.com/DavidFernandezChaves/ViMantic-Unity3DNode/blob/master/Resources/Vimantic.gif?raw=true" alt="ViMantic" width="400" height="200"/>
+</div>
+
 # ViMantic Client (ROS)
 ViMantic is a distributed architecture for semantic mapping of environments using mobile robots. For this, we have used Unity to create virtual environments that represent the information obtained from the real environment. This architecture is composed of one or several clients (robots/agents) and a server.
 
