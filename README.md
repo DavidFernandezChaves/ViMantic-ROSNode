@@ -13,15 +13,12 @@ ViMantic is a distributed architecture for semantic mapping of environments usin
 ## Requirements
 - [ViMantic - Server](https://github.com/DavidFernandezChaves/ViMantic-Server)
 - [RosBridge](http://wiki.ros.org/rosbridge_suite)
-- (Replaceable) [Detectron2](https://github.com/DavidFernandezChaves/Detectron2_ros)
+- [Detectron2](https://github.com/DavidFernandezChaves/Detectron2_ros) (Replaceable) 
 
 This software uses [Detectron2](https://github.com/DavidFernandezChaves/Detectron2_ros) as object recognizer. However, this architecture can be easily modified to use other object recognition systems.
 
 ## Process
 This node uses the Detectron2 to recognize objects in RGB images. It then extracts the point clouds of each detected object from a depth image. The point clouds are processed to try to fit the object and eliminate spurious points. Finally the information of the detected objects is sent to the architecture server.
-
-## Use
-Use the launcher: ViMantic_Detectron2/launch/ViMantic.launch
 
 ## Parameters
 ```bash
