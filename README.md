@@ -30,7 +30,7 @@ This node uses the Detectron2 to recognize objects in RGB images. It then extrac
         #Topic name of CNN input
         <param name="topic_republic" value="ViMantic/ToCNN"/>	
 	
-	# Minimum object size 
+	#Minimum object size 
         <param name="min_size" value="0.05"/>
         
         #Topic name of CNN results
