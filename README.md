@@ -23,7 +23,7 @@ This node uses the Detectron2 to recognize objects in RGB images. It then extrac
 ## Use
 Use the launcher: ViMantic_Detectron2/launch/ViMantic.launch
 
-Parameters:
+## Parameters
 ```bash
         #Name of the topic where the results are published
         <param name="topic_result" value="ViMantic/Detections"/>
