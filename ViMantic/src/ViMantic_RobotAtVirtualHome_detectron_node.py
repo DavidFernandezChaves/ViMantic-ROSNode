@@ -45,8 +45,10 @@ class ViManticNode(object):
         # Camera Calibration
         self._cx = 320
         self._cy = 240
-        self._fx = 457.1429
-        self._fy = 470.5882
+        self._fx = 548.5714
+        self._fy = 568.4211
+        #self._fx = 457.1429
+        #self._fy = 470.5882
         self._depth_range = 15
 
         # General Variables

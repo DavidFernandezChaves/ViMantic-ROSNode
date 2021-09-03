@@ -11,9 +11,9 @@ import tf
 import tf2_geometry_msgs
 import tf2_ros
 from cv_bridge import CvBridge, CvBridgeError
-from geometry_msgs.msg import Point32, PoseStamped, Point, Vector3, Quaternion, PoseWithCovariance
+from geometry_msgs.msg import Point32, PoseStamped, Point, Vector3, Quaternion, PoseWithCovariance, Pose
 from numpy import savetxt
-from vimantic.msg import SemanticObject, SemanticObjectArray
+from vimantic.msg import SemanticObject, SemanticObjectArray, ObjectHypothesis, DetectionArray, Detection
 from sensor_msgs.msg import Image
 
 
@@ -24,7 +24,7 @@ class ViManticNode(object):
         # ROS Parameters
         self.image_rgb_topic = self.load_param('~topic_intensity')
         self.image_depth_topic = self.load_param('~topic_depth')
-        self.semantic_topic = self.load_param('~topic_result', 'ViMantic/SemanticObjects')
+        self.semantic_topic = self.load_param('~topic_result', 'ViMantic/Detections')
         self.cnn_topic = self.load_param('~topic_cnn')
         self.image_toCNN = self.load_param('~topic_republic', 'ViMantic/ToCNN')
         self.input_angle = self.load_param('~input_angle', 0)
@@ -53,7 +53,7 @@ class ViManticNode(object):
         self._list_time_objectInfoPacket = []
 
         # Publisher
-        self._pub_result = rospy.Publisher(self.semantic_topic, SemanticObjectArray, queue_size=10)
+        self._pub_result = rospy.Publisher(self.semantic_topic, DetectionArray, queue_size=10)
         self._pub_repub = rospy.Publisher(self.image_toCNN, Image, queue_size=1)
 
         if (self.debug):
@@ -108,17 +108,20 @@ class ViManticNode(object):
                     y = ((self._cy - r) * z / self._fy)
 
                     # Cut out every object from the point cloud and build the result.
-                    result = SemanticObjectArray()
+                    result = DetectionArray()
 
                     result.header = data_header
                     result.header.frame_id = "/map"
+                    result.origin = self._last_msg[4]
+
                     objstring = 'Detected:'
                     for i in range(len(self._cnn_msg.class_names)):
 
-                        semanticObject = SemanticObject()
-
-                        semanticObject.object.score = self._cnn_msg.scores[i]
-                        semanticObject.objectType = self._cnn_msg.class_names[i]
+                        detection = Detection()
+                        det = ObjectHypothesis()
+                        det.id = self._cnn_msg.class_names[i]
+                        det.score = self._cnn_msg.scores[i]
+                        detection.scores.append(det)
 
                         try:
                             mask = (self._bridge.imgmsg_to_cv2(self._cnn_msg.masks[i]) == 255)
@@ -147,7 +150,7 @@ class ViManticNode(object):
                         scale_y = y_.max() - y_.min()
                         scale_z = np.std(z_)
 
-                        semanticObject.size = Vector3(scale_x, scale_y, scale_z)
+                        #semanticObject.size = Vector3(scale_x, scale_y, scale_z)
 
                         # Calculate the center px
                         x_center = int(self._cnn_msg.boxes[i].x_offset + self._cnn_msg.boxes[i].width / 2)
@@ -162,15 +165,15 @@ class ViManticNode(object):
                         p1.pose.position = Point(-x[y_center, x_center], y[y_center, x_center], z_center)
                         p1.pose.orientation.w = 1.0  # Neutral orientation
                         ans = tf2_geometry_msgs.do_transform_pose(p1, data_transform)
-                        semanticObject.object.pose = PoseWithCovariance()
-                        semanticObject.object.pose.pose = ans.pose
+                        semanticObject.pose = PoseWithCovariance()
+                        semanticObject.pose.pose = ans.pose
 
                         if self.debug:
                             self._pub_pose.publish(ans)
 
                         result.semanticObjects.append(semanticObject)
-                        objstring = objstring + ' ' + semanticObject.objectType + ', p=%.2f.' % (
-                            semanticObject.object.score)
+                        objstring = objstring + ' ' + det.id + ', p=%.2f.' % (
+                            det.score)
 
                     self._pub_result.publish(result)
                     rospy.loginfo(objstring)
@@ -203,6 +206,11 @@ class ViManticNode(object):
                                                         rgb_msg.header.frame_id,  # source frame
                                                         rospy.Time(0),  # get the tf at first available time
                                                         rospy.Duration(5))
+            origin = Pose()
+            origin.position.x = transform.transform.translation.x
+            origin.position.y = transform.transform.translation.y
+            origin.position.z = transform.transform.translation.z
+            origin.orientation = transform.transform.rotation
 
             # Robot@Home fixe
             # rotation = (transform.transform.rotation.x, transform.transform.rotation.y, transform.transform.rotation.z,
@@ -211,7 +219,7 @@ class ViManticNode(object):
             # newrot = tf.transformations.quaternion_from_euler(rot[0], rot[1], rot[2] - 90)
             # transform.transform.rotation = Quaternion(newrot[0], newrot[1], newrot[2], newrot[3])
 
-            self._last_msg = [img_depth, depth_msg.header, transform]
+            self._last_msg = [img_depth, depth_msg.header, transform, origin]
             self._waiting_cnn = True
             if self._enableTimeCapture:
                 self._time_cnn = rospy.get_rostime()
