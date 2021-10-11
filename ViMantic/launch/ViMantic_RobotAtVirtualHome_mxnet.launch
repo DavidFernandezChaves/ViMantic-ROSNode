@@ -7,7 +7,8 @@
     ### Semantic_maping Virtual###
     <node name="semantic_mapping" pkg="vimantic" type="ViMantic_RobotAtVirtualHome_mxnet_node.py" output="screen">
         <param name="topic_result" value="ViMantic/SemanticObjects"/>
-        <param name="topic_virtualCameraRGBD" value="RobotAtVirtualHome/VirtualCameraRGBD"/>
+        <param name="topic_virtualCameraRGB" value="RobotAtVirtualHome/VirtualCameraRGB"/>
+        <param name="topic_virtualCameraDepth" value="RobotAtVirtualHome/VirtualCameraDepth"/>
         <param name="topic_republic" value="ViMantic/ToCNN"/>
         <param name="topic_cnn" value="rr_mxnet/detections"/>
         <param name="threshold" value="0.01"/>

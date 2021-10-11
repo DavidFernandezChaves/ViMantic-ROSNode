@@ -5,6 +5,7 @@ import cv2
 import numpy as np
 import rospy
 import tf2_geometry_msgs
+import message_filters
 import tf2_ros
 from cv_bridge import CvBridge
 from geometry_msgs.msg import PoseStamped, PoseWithCovariance, Point, Vector3
@@ -17,7 +18,8 @@ class ViManticNode(object):
     def __init__(self):
         rospy.logwarn("Initializing")
         # ROS Parameters
-        self.image_topic = self.load_param('~topic_virtualCameraRGBD', "ViMantic/virtualCameraRGBD")
+        self.image_rgb_topic = self.load_param('~topic_virtualCameraRGB', "ViMantic/virtualCameraRGB")
+        self.image_depth_topic = self.load_param('~topic_virtualCameraDepth', "ViMantic/virtualCameraDepth")
         self.semantic_topic = self.load_param('~topic_result', 'ViMantic/SemanticObjects')
         self.cnn_topic = self.load_param('~topic_cnn')
         self.image_toCNN = self.load_param('~topic_republic', 'ViMantic/ToCNN')
@@ -47,7 +49,12 @@ class ViManticNode(object):
 
         # Subscribers
         rospy.Subscriber(self.cnn_topic, Detection2DArray, self.callback_cnn, queue_size=1)
-        rospy.Subscriber(self.image_topic, CompressedImage, self.callbackVirtualImage, queue_size=10)
+
+        sub_rgb_image = message_filters.Subscriber(self.image_rgb_topic, CompressedImage)
+        sub_depth_image = message_filters.Subscriber(self.image_depth_topic, CompressedImage)
+
+        message_filter = message_filters.ApproximateTimeSynchronizer([sub_depth_image, sub_rgb_image], 10, 0.3)
+        message_filter.registerCallback(self.callbackVirtualImage)
 
         tf2_ros.TransformListener(self._tfBuffer)
         self.start_time = 0
@@ -75,21 +82,18 @@ class ViManticNode(object):
 
         return [x, y]
 
-    def callbackVirtualImage(self, img_msg):
+    def callbackVirtualImage(self, depth_msg, rgb_msg):
 
         if not self._waiting_cnn:
             transform = self._tfBuffer.lookup_transform("map",
-                                                        img_msg.header.frame_id,  # source frame
+                                                        rgb_msg.header.frame_id,  # source frame
                                                         rospy.Time(0),  # get the tf at first available time
                                                         rospy.Duration(5))
 
-            np_arr = np.fromstring(img_msg.data, np.uint8)
-            im = cv2.imdecode(np_arr, -1)
-            img_rgb = cv2.cvtColor(im[:, :, :3], cv2.COLOR_RGB2BGR)
+            img_rgb = self.decode_image_rgb_from_unity(rgb_msg.data)
+            img_depth = self.decode_image_depth_from_unity(depth_msg.data)
 
-            img_depth = np.divide(im[:, :, 3], 255.0)
-
-            self._last_msg = [img_msg.header, img_rgb, img_depth, transform]
+            self._last_msg = [rgb_msg.header, img_rgb, img_depth, transform]
             self._pub_repub.publish(self._bridge.cv2_to_imgmsg(self._last_msg[1], 'rgb8'))
             self._tries = 0
             self._waiting_cnn = True
@@ -233,6 +237,23 @@ class ViManticNode(object):
         new_param = rospy.get_param(param, default)
         rospy.loginfo("[ViMantic] %s: %s", param, new_param)
         return new_param
+
+    @staticmethod
+    def decode_image_rgb_from_unity(unity_img):
+        np_arr = np.fromstring(unity_img, np.uint8)
+        im = cv2.imdecode(np_arr, -1)
+        img_rgb = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+
+        return img_rgb
+
+    @staticmethod
+    def decode_image_depth_from_unity(unity_img):
+        np_arr = np.fromstring(unity_img, np.uint8)
+        im = cv2.imdecode(np_arr, -1)
+        img_depth = np.divide(im, 255.0)
+        img_depth = cv2.cvtColor(img_depth, cv2.COLOR_RGB2GRAY)
+
+        return img_depth
 
 
 if __name__ == '__main__':

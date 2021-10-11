@@ -8,6 +8,7 @@ import numpy as np
 import open3d as o3d
 import rospy
 import tf2_geometry_msgs
+import message_filters
 import tf2_ros
 import matplotlib.cm as plt
 from math import pi, sin, cos
@@ -34,7 +35,8 @@ class ViManticNode(object):
 
         rospy.logwarn("Initializing")
         # ROS Parameters
-        self.image_topic = self.load_param('~topic_virtualCameraRGBD', "ViMantic/virtualCameraRGBD")
+        self.image_rgb_topic = self.load_param('~topic_virtualCameraRGB', "ViMantic/virtualCameraRGB")
+        self.image_depth_topic = self.load_param('~topic_virtualCameraDepth', "ViMantic/virtualCameraDepth")
         self.semantic_topic = self.load_param('~topic_result', 'ViMantic/Detections')
         self.cnn_topic = self.load_param('~topic_cnn', 'detectron2_ros/result')
         self.image_toCNN = self.load_param('~topic_republic', 'ViMantic/ToCNN')
@@ -63,7 +65,12 @@ class ViManticNode(object):
 
         # Subscribers
         rospy.Subscriber(self.cnn_topic, detectron2_ros.msg.Result, self.callback_new_detection)
-        rospy.Subscriber(self.image_topic, CompressedImage, self.callback_virtual_image, queue_size=10)
+
+        sub_rgb_image = message_filters.Subscriber(self.image_rgb_topic, CompressedImage)
+        sub_depth_image = message_filters.Subscriber(self.image_depth_topic, CompressedImage)
+
+        message_filter = message_filters.ApproximateTimeSynchronizer([sub_depth_image, sub_rgb_image], 10, 0.3)
+        message_filter.registerCallback(self.callback_virtual_image)
 
         # Handlers
         self._bridge = CvBridge()
@@ -303,39 +310,43 @@ class ViManticNode(object):
 
             rate.sleep()
 
-    def callback_virtual_image(self, img_msg):
+    def callback_virtual_image(self, depth_msg, rgb_msg):
 
         if not self._flag_processing:
-            transform = self._tfBuffer.lookup_transform("map",
-                                                        img_msg.header.frame_id,  # source frame
-                                                        rospy.Time(0))  # get the tf at first available time
+            #transform = self._tfBuffer.lookup_transform("map",
+            #                                            rgb_msg.header.frame_id,  # source frame
+            #                                            rospy.Time(0))  # get the tf at first available time
 
-            img_rgb, img_depth = self.decode_image_from_unity(img_msg.data)
+            img_rgb = self.decode_image_rgb_from_unity(rgb_msg.data)
+            img_depth = self.decode_image_depth_from_unity(depth_msg.data)
 
             try:
-                trans = self._tfBuffer.lookup_transform('map', img_msg.header.frame_id, rospy.Time())
+                trans = self._tfBuffer.lookup_transform('map', rgb_msg.header.frame_id, rospy.Time())
                 origin = Pose()
                 origin.position.x = trans.transform.translation.x
                 origin.position.y = trans.transform.translation.y
                 origin.position.z = trans.transform.translation.z
                 origin.orientation = trans.transform.rotation
 
+                self._last_msg = [rgb_msg.header, img_rgb, img_depth, trans, origin]
+                self._pub_processed_image.publish(self._bridge.cv2_to_imgmsg(self._last_msg[1], 'rgb8'))
+                self._tries = 0
+
+                if self._start_time == 0:
+                    self._start_time = time.time()
+
+                if self._image_c is None and self._image_r is None:
+                    # Generate a meshgrid where each pixel contains its pixel coordinates
+                    self._height, self._width = img_depth.shape
+                    self._image_c, self._image_r = np.meshgrid(np.arange(self._width), np.arange(self._height),
+                                                               sparse=True)
+                self._flag_processing = True
+
             except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
                 rospy.logwarn("Failing to retrieve robot pose")
                 origin = Pose()
 
-            self._last_msg = [img_msg.header, img_rgb, img_depth, transform, origin]
-            self._pub_processed_image.publish(self._bridge.cv2_to_imgmsg(self._last_msg[1], 'rgb8'))
-            self._tries = 0
 
-            if self._start_time == 0:
-                self._start_time = time.time()
-
-            if self._image_c is None and self._image_r is None:
-                # Generate a meshgrid where each pixel contains its pixel coordinates
-                self._height, self._width = img_depth.shape
-                self._image_c, self._image_r = np.meshgrid(np.arange(self._width), np.arange(self._height), sparse=True)
-            self._flag_processing = True
 
     def callback_new_detection(self, result_cnn):
 
@@ -358,6 +369,23 @@ class ViManticNode(object):
         new_param = rospy.get_param(param, default)
         rospy.loginfo("[ViMantic] %s: %s", param, new_param)
         return new_param
+
+    @staticmethod
+    def decode_image_rgb_from_unity(unity_img):
+        np_arr = np.fromstring(unity_img, np.uint8)
+        im = cv2.imdecode(np_arr, -1)
+        img_rgb = cv2.cvtColor(im, cv2.COLOR_RGB2BGR)
+
+        return img_rgb
+
+    @staticmethod
+    def decode_image_depth_from_unity(unity_img):
+        np_arr = np.fromstring(unity_img, np.uint8)
+        im = cv2.imdecode(np_arr, -1)
+        img_depth = np.divide(im, 255.0)
+        img_depth = cv2.cvtColor(img_depth, cv2.COLOR_RGB2GRAY)
+
+        return img_depth
 
     @staticmethod
     def decode_image_from_unity(unity_img):
