@@ -45,13 +45,21 @@ class ViManticNode(object):
         self.debug = self.load_param('~debug', False)
 
         # Camera Calibration
-        self._cx = 320
-        self._cy = 240
-        self._fx = 548.5714
-        self._fy = 568.4211
+        #WXGA (1366x768)
+        self._cx = 683
+        self._cy = 384
+        self._fx = 1170.857
+        self._fy = 909.4737
+        #VGA (640x480)
+        # self._cx = 320
+        # self._cy = 240
+        # self._fx = 548.5714
+        # self._fy = 568.4211
         #self._fx = 457.1429
         #self._fy = 470.5882
-        self._depth_range = 15
+
+        self._depth_range_max = 6
+        self._depth_range_min = 0
 
         # General Variables
         self._last_msg = None
@@ -98,7 +106,7 @@ class ViManticNode(object):
             if self._flag_processing and self._flag_cnn:
 
                 # Obtain 3D coordinates in meters of each pixel
-                z = self._last_msg[2] * self._depth_range
+                z = self._depth_range_min + (self._last_msg[2] * (self._depth_range_max-self._depth_range_min))
                 x = ((self._cx - self._image_c) * z / self._fx)
                 y = ((self._cy - self._image_r) * z / self._fy)
 
@@ -130,10 +138,14 @@ class ViManticNode(object):
                         print(e)
                         continue
 
+                    # image2 = self._last_msg[1]
+                    # image2 = cv2.bitwise_and(image2, image2, mask=mask.astype(np.uint8))
+                    # cv2.imshow(det.id, image2)
+                    # cv2.waitKey(0)
+
                     #kernel = np.ones((3,3),np.uint8)
                     #mask = cv2.erode(np.float32(mask),kernel).astype(bool)
-                    mask = thin(mask, 15)
-
+                    mask = thin(mask, 10)
 
                     if np.sum(mask) == 0:
                         continue
@@ -172,12 +184,11 @@ class ViManticNode(object):
 
                     # PointCloud Segmentation
                     # labels = np.array(pcd.cluster_dbscan(eps=0.006, min_points=10, print_progress=True))
-                    #
-                    #  max_label = labels.max()
-                    #  colors = plt.get_cmap("tab20")(labels / (max_label if max_label > 0 else 1))
-                    #  colors[labels < 0] = 0
-                    #  pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
-                    #  o3d.visualization.draw_geometries([pcd])
+                    # max_label = labels.max()
+                    # colors = plt.get_cmap("tab20")(labels / (max_label if max_label > 0 else 1))
+                    # colors[labels < 0] = 0
+                    # pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
+                    # o3d.visualization.draw_geometries([pcd])
 
                     # Get best Angle
                     volume = pcd.get_axis_aligned_bounding_box().volume()
@@ -207,7 +218,7 @@ class ViManticNode(object):
                     if scale[0] < self._min_size or scale[1] < self._min_size or scale[2] < self._min_size:
                         continue
 
-                    # o3d.visualization.draw_geometries([best_pcd, best_obb])
+                    # o3d.visualization.draw_geometries([pcd, best_obb])
                     oriented_bb = o3d.geometry.OrientedBoundingBox(best_obb.get_center(),
                                                                    np.matmul(self.x_rotation(-10 * pi / 180.0),
                                                                              self.y_rotation(-best_angle)), scale)
@@ -235,7 +246,13 @@ class ViManticNode(object):
                     detection.occluded_corners |= ((detection.occluded_corners & (1 << 7)) >> 3)
                     detection.occluded_corners |= ((detection.occluded_corners & (1 << 0)) << 2)
                     detection.occluded_corners |= ((detection.occluded_corners & (1 << 1)) << 6)
-                    """
+
+
+                    # image2 = cv2.bitwise_and(image2, image, mask=mask.astype(np.uint8))
+                    # cv2.imshow(det.id, image2)
+                    # cv2.waitKey(0)
+
+                    image = cv2.bitwise_and(image, image, mask=mask.astype(np.uint8))
                     for i, pt in enumerate(np.asarray(oriented_bb.get_box_points())):
                         px = int(self._cx - (pt[0] * self._fx / pt[2]))
                         py = int(self._cy - (pt[1] * self._fy / pt[2]))
@@ -243,11 +260,9 @@ class ViManticNode(object):
                             image = cv2.circle(image, (px, py), 10, (0, 0, 255), -1)
                         else:
                             image = cv2.circle(image, (px, py), 10, (0, 255, 0), -1)
-                    
-                    image = cv2.bitwise_and(image, image, mask=mask.astype(np.uint8))
-                    cv2.imshow("Paco",image)
-                    cv2.waitKey(10)
-                    """
+
+                    # cv2.imshow(det.id,image)
+                    # cv2.waitKey(0)
 
                     # Transform local to global frame
                     # corners = []
