@@ -303,7 +303,6 @@ class ViManticNode(object):
                     #     detection.fixed_corners |= pt[1] << i
 
                     detections.detections.append(detection)
-                    print(det.id, det.score)
                     obj_string = obj_string + ' ' + det.id + ', p=%.2f.' % det.score
 
                 self._pub_result.publish(detections)
@@ -397,9 +396,8 @@ class ViManticNode(object):
     @staticmethod
     def decode_image_depth_from_unity(unity_img):
         np_arr = np.fromstring(unity_img, np.uint8)
-        im = cv2.imdecode(np_arr, -1)
-        #img_depth = np.divide(im, 255.0)
-        img_depth = cv2.cvtColor(im, cv2.COLOR_RGB2GRAY)
+        im = cv2.imdecode(np_arr, -1)[:,:,0]
+        img_depth = np.divide(im, 255.0)
 
         return img_depth
 
