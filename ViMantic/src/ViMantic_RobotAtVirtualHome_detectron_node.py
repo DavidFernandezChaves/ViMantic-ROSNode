@@ -45,12 +45,17 @@ class ViManticNode(object):
         self.debug = self.load_param('~debug', False)
 
         # Camera Calibration
-        #WXGA (1366x768)
-        self._cx = 683
-        self._cy = 384
-        self._fx = 1170.857
-        self._fy = 909.4737
-        #VGA (640x480)
+        # 1280x1024 // Focal Length 2.28064 // Field of View 75
+        self._cx = 640
+        self._cy = 512
+        self._fx = 608.1718
+        self._fy = 667.2514
+        #WXGA (1366x768)  Focal Length 18
+        # self._cx = 683
+        # self._cy = 384
+        # self._fx = 1170.857
+        # self._fy = 909.4737
+        #VGA (640x480)   Focal Length 18
         # self._cx = 320
         # self._cy = 240
         # self._fx = 548.5714
@@ -58,8 +63,7 @@ class ViManticNode(object):
         #self._fx = 457.1429
         #self._fy = 470.5882
 
-        self._depth_range_max = 6
-        self._depth_range_min = 0
+        self._depth_range_max = 10
 
         # General Variables
         self._last_msg = None
@@ -77,7 +81,7 @@ class ViManticNode(object):
         sub_rgb_image = message_filters.Subscriber(self.image_rgb_topic, CompressedImage)
         sub_depth_image = message_filters.Subscriber(self.image_depth_topic, CompressedImage)
 
-        message_filter = message_filters.ApproximateTimeSynchronizer([sub_depth_image, sub_rgb_image], 10, 0.3)
+        message_filter = message_filters.ApproximateTimeSynchronizer([sub_depth_image, sub_rgb_image], 10, 1)
         message_filter.registerCallback(self.callback_virtual_image)
 
         # Handlers
@@ -106,7 +110,7 @@ class ViManticNode(object):
             if self._flag_processing and self._flag_cnn:
 
                 # Obtain 3D coordinates in meters of each pixel
-                z = self._depth_range_min + (self._last_msg[2] * (self._depth_range_max-self._depth_range_min))
+                z = self._last_msg[2] * self._depth_range_max
                 x = ((self._cx - self._image_c) * z / self._fx)
                 y = ((self._cy - self._image_r) * z / self._fy)
 
@@ -138,14 +142,23 @@ class ViManticNode(object):
                         print(e)
                         continue
 
+#Ver imagen de mascara
                     # image2 = self._last_msg[1]
                     # image2 = cv2.bitwise_and(image2, image2, mask=mask.astype(np.uint8))
                     # cv2.imshow(det.id, image2)
                     # cv2.waitKey(0)
+#--------------
 
                     #kernel = np.ones((3,3),np.uint8)
                     #mask = cv2.erode(np.float32(mask),kernel).astype(bool)
-                    mask = thin(mask, 10)
+                    mask = thin(mask, 5)
+
+# Ver imagen de mascara
+#                     image2 = self._last_msg[1]
+#                     image2 = cv2.bitwise_and(image2, image2, mask=mask.astype(np.uint8))
+#                     cv2.imshow(det.id, image2)
+#                     cv2.waitKey(0)
+# --------------
 
                     if np.sum(mask) == 0:
                         continue
@@ -188,7 +201,7 @@ class ViManticNode(object):
                     # colors = plt.get_cmap("tab20")(labels / (max_label if max_label > 0 else 1))
                     # colors[labels < 0] = 0
                     # pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
-                    # o3d.visualization.draw_geometries([pcd])
+                    #o3d.visualization.draw_geometries([pcd])
 
                     # Get best Angle
                     volume = pcd.get_axis_aligned_bounding_box().volume()
@@ -218,7 +231,9 @@ class ViManticNode(object):
                     if scale[0] < self._min_size or scale[1] < self._min_size or scale[2] < self._min_size:
                         continue
 
+#BB Fixed visualization
                     # o3d.visualization.draw_geometries([pcd, best_obb])
+#----------------------
                     oriented_bb = o3d.geometry.OrientedBoundingBox(best_obb.get_center(),
                                                                    np.matmul(self.x_rotation(-10 * pi / 180.0),
                                                                              self.y_rotation(-best_angle)), scale)
@@ -396,7 +411,7 @@ class ViManticNode(object):
     @staticmethod
     def decode_image_depth_from_unity(unity_img):
         np_arr = np.fromstring(unity_img, np.uint8)
-        im = cv2.imdecode(np_arr, -1)[:,:,0]
+        im = cv2.imdecode(np_arr, -1)
         img_depth = np.divide(im, 255.0)
 
         return img_depth
