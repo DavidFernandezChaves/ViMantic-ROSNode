@@ -367,7 +367,7 @@ class ViManticNode(object):
 
                 if self._image_c is None and self._image_r is None:
                     # Generate a meshgrid where each pixel contains its pixel coordinates
-                    self._height, self._width = img_depth.shape
+                    self._height, self._width  = img_depth.shape
                     self._image_c, self._image_r = np.meshgrid(np.arange(self._width), np.arange(self._height),
                                                                sparse=True)
                 self._flag_processing = True
@@ -411,7 +411,7 @@ class ViManticNode(object):
     @staticmethod
     def decode_image_depth_from_unity(unity_img):
         np_arr = np.fromstring(unity_img, np.uint8)
-        im = cv2.imdecode(np_arr, -1)
+        im = cv2.imdecode(np_arr, -1)[:,:,2]
         img_depth = np.divide(im, 255.0)
 
         return img_depth
