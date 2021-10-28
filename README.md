@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/DavidFernandezChaves/ViMantic-Unity3DNode/blob/master/Resources/Vimantic.gif?raw=true" alt="ViMantic" width="400" height="200"/>
+  <img src="https://raw.githubusercontent.com/DavidFernandezChaves/ViMantic-Unity3DNode/master/Textures/Vimantic.gif" alt="ViMantic" width="400" height="200"/>
 </div>
 
 # ViMantic Client (ROS)
