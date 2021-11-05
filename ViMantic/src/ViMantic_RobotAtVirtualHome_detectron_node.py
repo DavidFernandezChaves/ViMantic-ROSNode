@@ -413,6 +413,7 @@ class ViManticNode(object):
         buf = np.ndarray(shape=(1, len(unity_img)),
                          dtype=np.uint8, buffer=unity_img)
         img_depth = cv2.imdecode(buf, cv2.IMREAD_UNCHANGED)
+        img_depth = np.divide(img_depth, 65535.0)
 
         return img_depth
 
