@@ -410,9 +410,9 @@ class ViManticNode(object):
 
     @staticmethod
     def decode_image_depth_from_unity(unity_img):
-        np_arr = np.fromstring(unity_img, np.uint8)
-        im = cv2.imdecode(np_arr, -1)[:,:,2]
-        img_depth = np.divide(im, 255.0)
+        buf = np.ndarray(shape=(1, len(unity_img)),
+                         dtype=np.uint8, buffer=unity_img)
+        img_depth = cv2.imdecode(buf, cv2.IMREAD_UNCHANGED)
 
         return img_depth
 
