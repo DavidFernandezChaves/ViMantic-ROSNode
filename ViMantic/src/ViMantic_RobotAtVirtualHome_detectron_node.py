@@ -143,7 +143,7 @@ class ViManticNode(object):
                         continue
 
 #Ver imagen de mascara
-                    image2 = self._last_msg[1]
+                    image2 = self._last_msg[1].copy()
                     image2 = cv2.bitwise_and(image2, image2, mask=mask.astype(np.uint8))
                     cv2.imshow(det.id, image2)
                     cv2.waitKey(0)
@@ -154,7 +154,7 @@ class ViManticNode(object):
                     mask = thin(mask, 15)
 
 # Ver imagen de mascara
-                    image2 = self._last_msg[1]
+                    image2 = self._last_msg[1].copy()
                     image2 = cv2.bitwise_and(image2, image2, mask=mask.astype(np.uint8))
                     cv2.imshow(det.id, image2)
                     cv2.waitKey(0)
@@ -178,11 +178,11 @@ class ViManticNode(object):
                     filtered_mask = np.logical_and(z_ > bottom_margin, z_ < top_margin)
 
 # Ver imagen de mascara
-                    image2 = self._last_msg[2]
-                    image2[filtered_mask==0] = 0
-                    image2 = cv2.merge([image2,image2,image2])
-                    image2[:,:,2][filtered_mask==0]=255
-                    cv2.imshow(det.id, image2)
+                    z_show = z.copy()
+                    z_show = cv2.bitwise_and(z_show, z_show, mask=mask.astype(np.uint8))
+                    mask2 = np.logical_and(z_show.copy() > bottom_margin, z_show.copy() < top_margin)
+                    z_show = cv2.bitwise_and(z_show, z_show, mask=mask2.astype(np.uint8))
+                    cv2.imshow(det.id, z_show)
                     cv2.waitKey(0)
 # --------------
 
