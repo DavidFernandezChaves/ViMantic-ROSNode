@@ -143,21 +143,21 @@ class ViManticNode(object):
                         continue
 
 #Ver imagen de mascara
-                    # image2 = self._last_msg[1]
-                    # image2 = cv2.bitwise_and(image2, image2, mask=mask.astype(np.uint8))
-                    # cv2.imshow(det.id, image2)
-                    # cv2.waitKey(0)
+                    image2 = self._last_msg[1]
+                    image2 = cv2.bitwise_and(image2, image2, mask=mask.astype(np.uint8))
+                    cv2.imshow(det.id, image2)
+                    cv2.waitKey(0)
 #--------------
 
                     #kernel = np.ones((3,3),np.uint8)
                     #mask = cv2.erode(np.float32(mask),kernel).astype(bool)
-                    mask = thin(mask, 5)
+                    mask = thin(mask, 15)
 
 # Ver imagen de mascara
-#                     image2 = self._last_msg[1]
-#                     image2 = cv2.bitwise_and(image2, image2, mask=mask.astype(np.uint8))
-#                     cv2.imshow(det.id, image2)
-#                     cv2.waitKey(0)
+                    image2 = self._last_msg[1]
+                    image2 = cv2.bitwise_and(image2, image2, mask=mask.astype(np.uint8))
+                    cv2.imshow(det.id, image2)
+                    cv2.waitKey(0)
 # --------------
 
                     if np.sum(mask) == 0:
@@ -176,6 +176,15 @@ class ViManticNode(object):
                     top_margin = mean + 1.5 * std
                     bottom_margin = mean - 1.5 * std
                     filtered_mask = np.logical_and(z_ > bottom_margin, z_ < top_margin)
+
+# Ver imagen de mascara
+                    image2 = self._last_msg[2]
+                    image2[filtered_mask==0] = 0
+                    image2 = cv2.merge([image2,image2,image2])
+                    image2[:,:,2][filtered_mask==0]=255
+                    cv2.imshow(det.id, image2)
+                    cv2.waitKey(0)
+# --------------
 
                     if np.sum(filtered_mask) == 0:
                         continue
@@ -232,7 +241,7 @@ class ViManticNode(object):
                         continue
 
 #BB Fixed visualization
-                    # o3d.visualization.draw_geometries([pcd, best_obb])
+                    o3d.visualization.draw_geometries([pcd, best_obb])
 #----------------------
                     oriented_bb = o3d.geometry.OrientedBoundingBox(best_obb.get_center(),
                                                                    np.matmul(self.x_rotation(-10 * pi / 180.0),
