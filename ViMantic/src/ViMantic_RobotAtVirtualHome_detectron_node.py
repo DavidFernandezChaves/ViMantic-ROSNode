@@ -15,11 +15,11 @@ from math import pi, sin, cos
 from cv_bridge import CvBridge, CvBridgeError
 from tf.transformations import quaternion_from_euler
 from skimage.morphology import thin
+from sklearn.cluster import DBSCAN
 
 from geometry_msgs.msg import PoseStamped, Point, Vector3, Pose, Quaternion, PointStamped
 from sensor_msgs.msg import Image, CompressedImage
 from vimantic.msg import Detection, DetectionArray, ObjectHypothesis
-
 
 class ViManticNode(object):
     def __init__(self):
@@ -46,20 +46,20 @@ class ViManticNode(object):
 
         # Camera Calibration
         # 1280x1024 // Focal Length 2.28064 // Field of View 75
-        self._cx = 640
-        self._cy = 512
-        self._fx = 608.1718
-        self._fy = 667.2514
+        # self._cx = 640
+        # self._cy = 512
+        # self._fx = 608.1718
+        # self._fy = 667.2514
         #WXGA (1366x768)  Focal Length 18
         # self._cx = 683
         # self._cy = 384
         # self._fx = 1170.857
         # self._fy = 909.4737
         #VGA (640x480)   Focal Length 18
-        # self._cx = 320
-        # self._cy = 240
-        # self._fx = 548.5714
-        # self._fy = 568.4211
+        self._cx = 320
+        self._cy = 240
+        self._fx = 304.0859
+        self._fy = 312.7741
         #self._fx = 457.1429
         #self._fy = 470.5882
 
@@ -88,6 +88,7 @@ class ViManticNode(object):
         self._bridge = CvBridge()
         self._tfBuffer = tf2_ros.Buffer()
         tf2_ros.TransformListener(self._tfBuffer)
+        self._tr = Transformations()
 
         rospy.logwarn("Initialized")
 
@@ -147,17 +148,19 @@ class ViManticNode(object):
                     image2 = cv2.bitwise_and(image2, image2, mask=mask.astype(np.uint8))
                     cv2.imshow(det.id, image2)
                     cv2.waitKey(0)
+                    cv2.imwrite("/home/matez/Desktop/images_process/mask.png", image2)
 #--------------
 
                     #kernel = np.ones((3,3),np.uint8)
                     #mask = cv2.erode(np.float32(mask),kernel).astype(bool)
-                    mask = thin(mask, 15)
+                    mask = thin(mask, 5)
 
 # Ver imagen de mascara
                     image2 = self._last_msg[1].copy()
                     image2 = cv2.bitwise_and(image2, image2, mask=mask.astype(np.uint8))
                     cv2.imshow(det.id, image2)
                     cv2.waitKey(0)
+                    cv2.imwrite("/home/matez/Desktop/images_process/mask_thinning.png", image2)
 # --------------
 
                     if np.sum(mask) == 0:
@@ -168,49 +171,35 @@ class ViManticNode(object):
                     y_ = y[mask]
                     z_ = z[mask]
 
-                    # Statistics from Z data
-                    mean = np.mean(z_)
-                    std = np.std(z_)
-
-                    # Bandpass filter with Z data
-                    top_margin = mean + 1.5 * std
-                    bottom_margin = mean - 1.5 * std
-                    filtered_mask = np.logical_and(z_ > bottom_margin, z_ < top_margin)
-
-# Ver imagen de mascara
-                    z_show = z.copy()
-                    z_show = cv2.bitwise_and(z_show, z_show, mask=mask.astype(np.uint8))
-                    mask2 = np.logical_and(z_show.copy() > bottom_margin, z_show.copy() < top_margin)
-                    z_show = cv2.bitwise_and(z_show, z_show, mask=mask2.astype(np.uint8))
-                    cv2.imshow(det.id, z_show)
-                    cv2.waitKey(0)
-# --------------
-
-                    if np.sum(filtered_mask) == 0:
-                        continue
-
-                    # Obtain filtered point cloud
-                    point_cloud = np.array([x_[filtered_mask].reshape(-1),
-                                            y_[filtered_mask].reshape(-1),
-                                            z_[filtered_mask].reshape(-1)]).T
-
+                    # Obtain raw point cloud
+                    point_cloud = np.array([x_.reshape(-1),
+                                            y_.reshape(-1),
+                                            z_.reshape(-1)]).T
 
                     pcd = o3d.geometry.PointCloud()
                     pcd.points = o3d.utility.Vector3dVector(point_cloud)
-                    #_, ind = pcd.remove_radius_outlier(nb_points=30, radius=0.05)
-                    # self.display_inlier_outlier(pcd, ind)
-                    #pcd = pcd.select_down_sample(ind)
+                    #pcd = pcd.voxel_down_sample(voxel_size=0.05)
 
                     if not pcd.has_points():
                         continue
 
                     # PointCloud Segmentation
-                    # labels = np.array(pcd.cluster_dbscan(eps=0.006, min_points=10, print_progress=True))
-                    # max_label = labels.max()
-                    # colors = plt.get_cmap("tab20")(labels / (max_label if max_label > 0 else 1))
-                    # colors[labels < 0] = 0
-                    # pcd.colors = o3d.utility.Vector3dVector(colors[:, :3])
-                    #o3d.visualization.draw_geometries([pcd])
+                    clustering = DBSCAN(eps=0.15, min_samples=20).fit(np.asarray(pcd.points))
+                    labels = clustering.labels_.astype(np.float_)
+                    labels_unique, counts = np.unique(labels, return_counts=True)
+# Ver point cloud segmentada
+                    max_label = labels.max()
+                    colors = plt.get_cmap("Set1")(labels / (max_label if max_label > 0 else 1))
+                    colors[labels < 0] = 0
+                    pcd_show = pcd
+                    pcd_show.colors = o3d.utility.Vector3dVector(colors[:, :3])
+                    pcd_show = pcd.select_down_sample(np.where(labels != -1)[0])
+                    o3d.visualization.draw_geometries([pcd_show])
+# --------------
+                    pcd = pcd.select_down_sample(np.where(labels == labels_unique[np.argmax(counts)])[0])
+# Ver point cloud filtrada
+                    o3d.visualization.draw_geometries([pcd])
+# --------------
 
                     # Get best Angle
                     volume = pcd.get_axis_aligned_bounding_box().volume()
@@ -240,12 +229,13 @@ class ViManticNode(object):
                     if scale[0] < self._min_size or scale[1] < self._min_size or scale[2] < self._min_size:
                         continue
 
-#BB Fixed visualization
-                    o3d.visualization.draw_geometries([pcd, best_obb])
-#----------------------
                     oriented_bb = o3d.geometry.OrientedBoundingBox(best_obb.get_center(),
                                                                    np.matmul(self.x_rotation(-10 * pi / 180.0),
-                                                                             self.y_rotation(-best_angle)), scale)
+                                                                   self.y_rotation(-best_angle)), scale)
+
+                    # BB Fixed visualization
+                    o3d.visualization.draw_geometries([pcd, oriented_bb])
+                    # ----------------------
 
                     detection.occluded_corners = 0
                     image = self._last_msg[1]
@@ -253,16 +243,10 @@ class ViManticNode(object):
                         px = int(self._cx - (pt[0] * self._fx / pt[2]))
                         py = int(self._cy - (pt[1] * self._fy / pt[2]))
 
-                        if px >= self._width - 30 or px <= 30 or py >= self._height - 31 or py <= 30:
-                            # image = cv2.putText(image, str(i), (px, py), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2,
-                            #                     cv2.LINE_AA)
+                        if px >= self._width - 10 or px <= 10 or py >= self._height - 10 or py <= 10:
                             detection.occluded_corners |= 1 << i
-                            #image = cv2.circle(image, (px, py), 10, (0, 0, 255), -1)
-                        elif pt[2] - 0.2 > z[py, px]:
+                        elif pt[2] - 0.2 > np.min(np.min(z[py - 5:py + 5, px - 5:px + 5])):
                             detection.occluded_corners |= 1 << i
-                            #image = cv2.circle(image, (px, py), 10, (0, 0, 255), -1)
-                        #else:
-                            #image = cv2.circle(image, (px, py), 10, (0, 255, 0), -1)
 
                     detection.occluded_corners |= ((detection.occluded_corners & (1 << 0)) << 3)
                     detection.occluded_corners |= ((detection.occluded_corners & (1 << 1)) << 5)
@@ -270,11 +254,6 @@ class ViManticNode(object):
                     detection.occluded_corners |= ((detection.occluded_corners & (1 << 7)) >> 3)
                     detection.occluded_corners |= ((detection.occluded_corners & (1 << 0)) << 2)
                     detection.occluded_corners |= ((detection.occluded_corners & (1 << 1)) << 6)
-
-
-                    # image2 = cv2.bitwise_and(image2, image, mask=mask.astype(np.uint8))
-                    # cv2.imshow(det.id, image2)
-                    # cv2.waitKey(0)
 
                     image = cv2.bitwise_and(image, image, mask=mask.astype(np.uint8))
                     for i, pt in enumerate(np.asarray(oriented_bb.get_box_points())):
@@ -285,46 +264,17 @@ class ViManticNode(object):
                         else:
                             image = cv2.circle(image, (px, py), 10, (0, 255, 0), -1)
 
-                    # cv2.imshow(det.id,image)
-                    # cv2.waitKey(0)
+                    cv2.imshow(det.id,image)
+                    cv2.waitKey(0)
+                    cv2.imwrite("/home/matez/Desktop/images_process/corners.png", image)
 
                     # Transform local to global frame
-                    # corners = []
                     detection.corners = []
                     for i, pt in enumerate(np.asarray(oriented_bb.get_box_points())):
                         # print("Punto original: " + str(pt))
                         global_point = tf2_geometry_msgs.do_transform_point(
                             PointStamped(self._last_msg[0], Point(pt[2], pt[0], pt[1])), self._last_msg[3]).point
                         detection.corners.append(global_point)
-
-                    # Order corners
-                    # corners.sort(key=lambda x: x[0].z, reverse=False)
-                    # top_corners = corners[:4]
-                    # bottom_corners = corners[4:]
-                    #
-                    # top_corners.sort(key=lambda x: x[0].x, reverse=False)
-                    # bottom_corners.sort(key=lambda x: x[0].x, reverse=False)
-                    #
-                    # if top_corners[2][0].x - top_corners[1][0].x > 0.05 * scale[0]:
-                    #     ordered_corners = top_corners[:2]
-                    #     ordered_corners.sort(key=lambda x: x[0].y, reverse=False)
-                    #     remain_corners = top_corners[2:4]
-                    #     remain_corners.sort(key=lambda x: x[0].y, reverse=True)
-                    #     ordered_corners += remain_corners
-                    # else:
-                    #     ordered_corners = top_corners[:3]
-                    #     ordered_corners.sort(key=lambda x: x[0].y, reverse=False)
-                    #     ordered_corners += [top_corners[3]]
-                    #
-                    # bottom_corners = [[Point(corner[0].x, corner[0].y, corner[0].z - scale[1]),corner[1]] for corner in
-                    #                   ordered_corners]
-                    #
-                    # detection.corners = [pt[0] for pt in (ordered_corners + bottom_corners)]
-
-                    # Get fixed corners
-                    # detection.fixed_corners = 0
-                    # for i, pt in enumerate(ordered_corners + bottom_corners):
-                    #     detection.fixed_corners |= pt[1] << i
 
                     detections.detections.append(detection)
                     obj_string = obj_string + ' ' + det.id + ', p=%.2f.' % det.score
