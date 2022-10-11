@@ -88,7 +88,6 @@ class ViManticNode(object):
         self._bridge = CvBridge()
         self._tfBuffer = tf2_ros.Buffer()
         tf2_ros.TransformListener(self._tfBuffer)
-        self._tr = Transformations()
 
         rospy.logwarn("Initialized")
 
